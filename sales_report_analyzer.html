@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>銷售報表分析工具 (Gemini ✨)</title>
+    <title>銷售報表分析工具</title> <!-- 移除 AI 標記 -->
     <!-- 引入 Tailwind CSS 以美化介面 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 SheetJS (xlsx.js) 用於讀取 Excel 檔案 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- 引入 Chart.js 用於繪製圖表 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 引入 Showdown.js 將 Markdown 轉為 HTML -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <!-- 移除 Showdown.js -->
     <style>
         /* 自訂樣式，讓介面更美觀 */
         body {
@@ -37,26 +36,7 @@
             background-color: #f0f9ff;
             border-color: #3b82f6;
         }
-        /* AI 結果區域的樣式 */
-        #ai-result h3 {
-            font-size: 1.125rem; /* text-lg */
-            font-weight: 600; /* font-semibold */
-            margin-top: 1.25rem; /* mt-5 */
-            margin-bottom: 0.5rem; /* mb-2 */
-            padding-bottom: 0.25rem; /* pb-1 */
-            border-bottom: 1px solid #e5e7eb; /* border-b */
-        }
-        #ai-result ul {
-            list-style-type: disc;
-            padding-left: 1.5rem; /* pl-6 */
-            margin-top: 0.5rem; /* mt-2 */
-        }
-        #ai-result li {
-            margin-bottom: 0.25rem; /* mb-1 */
-        }
-        #ai-result p {
-            margin-bottom: 0.75rem; /* mb-3 */
-        }
+        /* 移除 AI 相關樣式 */
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8">
@@ -64,8 +44,8 @@
         
         <!-- 標題區 -->
         <header class="mb-8 border-b pb-4">
-            <h1 class="text-3xl font-bold text-gray-800">銷售報表分析工具 (Gemini ✨)</h1>
-            <p class="text-gray-500 mt-2">請上傳您的 Excel 銷售報表，系統將自動彙總資料、產生圖表，並提供 AI 銷售洞察。</p>
+            <h1 class="text-3xl font-bold text-gray-800">銷售報表分析工具</h1> <!-- 移除 AI 標記 -->
+            <p class="text-gray-500 mt-2">請上傳您的 Excel 銷售報表，系統將自動彙總資料並產生圖表。</p> <!-- 移除 AI 描述 -->
         </header>
 
         <!-- 檔案上傳區 -->
@@ -97,9 +77,7 @@
                     <button id="tab-chart" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
                         趨勢圖表
                     </button>
-                    <button id="tab-ai" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
-                        AI 分析與建議 ✨
-                    </button>
+                    <!-- 移除 AI 分頁按鈕 -->
                 </nav>
             </div>
 
@@ -173,25 +151,7 @@
                     </div>
                 </div>
                 
-                <!-- AI 分析分頁 (預設隱藏) -->
-                <div id="content-ai" class="hidden">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold text-gray-700">Gemini 銷售洞察</h2>
-                    </div>
-                    <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                         <button id="generate-ai-insight-btn" class="w-full px-4 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-md flex items-center justify-center">
-                            <span class="text-2xl mr-2">✨</span> 產生銷售分析與建議
-                        </button>
-                        <div id="ai-loading" class="hidden text-center my-8">
-                            <svg class="animate-spin h-6 w-6 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="mt-2 text-gray-600 text-sm">Gemini 正在分析您的數據，請稍候...</p>
-                        </div>
-                        <div id="ai-result" class="mt-4 text-gray-800 bg-white p-4 rounded-md border hidden"></div>
-                    </div>
-                </div>
+                <!-- 移除 AI 分析分頁 -->
             </div>
         </div>
     </div>
@@ -212,21 +172,19 @@
 
         const tabReport = document.getElementById('tab-report');
         const tabChart = document.getElementById('tab-chart');
-        const tabAi = document.getElementById('tab-ai');
+        /* 移除 tabAi */
         const contentReport = document.getElementById('content-report');
         const contentChart = document.getElementById('content-chart');
-        const contentAi = document.getElementById('content-ai');
+        /* 移除 contentAi */
         
-        const generateAiBtn = document.getElementById('generate-ai-insight-btn');
-        const aiLoading = document.getElementById('ai-loading');
-        const aiResult = document.getElementById('ai-result');
+        /* 移除 AI 相關 DOM 元素 */
 
         // 全域變數
         let chartInstance = null;
         let processedData = null; // Map<productId, {name, category, totalSales, totalAmount, salesByPeriod, amountByPeriod}>
         let categoryData = new Map(); // Map<categoryName, {totalAmount, amountByPeriod, totalSales, salesByPeriod}>
         let allPeriods = [];
-        const markdownConverter = new showdown.Converter();
+        /* 移除 markdownConverter */
         // 圖表顏色池
         const CHART_COLORS = ['#3B82F6', '#10B981', '#EF4444', '#F59E0B', '#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#D946EF', '#0EA5E9'];
 
@@ -289,22 +247,21 @@
                         existingProduct.salesByPeriod[period] = (existingProduct.salesByPeriod[period] || 0) + salesQuantity;
                         existingProduct.amountByPeriod[period] = (existingProduct.amountByPeriod[period] || 0) + salesAmount;
 
-                        // 2. 處理分類資料 (categoryData) - 僅在有分類時
-                        if (category) {
-                            if (!categoryData.has(category)) {
-                                categoryData.set(category, { 
-                                    totalAmount: 0, 
-                                    amountByPeriod: {},
-                                    totalSales: 0, // **新**
-                                    salesByPeriod: {} // **新**
-                                });
-                            }
-                            const existingCategory = categoryData.get(category);
-                            existingCategory.totalAmount += salesAmount;
-                            existingCategory.amountByPeriod[period] = (existingCategory.amountByPeriod[period] || 0) + salesAmount;
-                            existingCategory.totalSales += salesQuantity; // **新**
-                            existingCategory.salesByPeriod[period] = (existingCategory.salesByPeriod[period] || 0) + salesQuantity; // **新**
+                        // 2. 處理分類資料 (categoryData) - **修正**
+                        // 移除 if (category) 檢查，確保 '其他' 分類也能被正確彙總
+                        if (!categoryData.has(category)) {
+                            categoryData.set(category, { 
+                                totalAmount: 0, 
+                                amountByPeriod: {},
+                                totalSales: 0, // **新**
+                                salesByPeriod: {} // **新**
+                            });
                         }
+                        const existingCategory = categoryData.get(category);
+                        existingCategory.totalAmount += salesAmount;
+                        existingCategory.amountByPeriod[period] = (existingCategory.amountByPeriod[period] || 0) + salesAmount;
+                        existingCategory.totalSales += salesQuantity; // **新**
+                        existingCategory.salesByPeriod[period] = (existingCategory.salesByPeriod[period] || 0) + salesQuantity; // **新**
                     });
                 } catch (error) {
                     console.error(`處理檔案 ${file.name} 時發生錯誤:`, error);
@@ -356,13 +313,13 @@
         
         /** 從品名中提取分類 (例如 "hOCG_...") */
         function getCategoryFromName(name) {
-            if (typeof name !== 'string') return null;
+            if (typeof name !== 'string') return '其他'; // **修正**
             const parts = name.split('_');
             // 檢查第一部分是否僅包含英數字元且不為空
             if (parts.length > 1 && parts[0].match(/^[a-zA-Z0-9]+$/)) {
                 return parts[0];
             }
-            return null; // 若無底線或格式不符則無分類
+            return '其他'; // **修正**
         }
         
         function resetUI() {
@@ -370,8 +327,7 @@
             reportTableBody.innerHTML = '';
             chartItemSelection.innerHTML = '';
             fileListDiv.innerHTML = '';
-            aiResult.innerHTML = '';
-            aiResult.classList.add('hidden');
+            /* 移除 aiResult 重設 */
             if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
         }
 
@@ -387,7 +343,8 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${info.category || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${info.totalSales.toLocaleString()}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-bold">${info.totalAmount.toLocaleString()}</td>
-                `;
+                </tr>
+            `;
                 reportTableBody.appendChild(row);
             }
         }
@@ -499,31 +456,9 @@
             // 3. 產生 結構
             sortedCategoryKeys.forEach((categoryKey, index) => {
                 const products = productsByCategory.get(categoryKey);
-                // 即使分類下沒產品，只要 categoryData 有資料 (例如只有分類彙總)，也可能要顯示
-                // "其他" 分類要特別處理，因為它沒有自己的 categoryData 項目，但仍需彙總
-                const otherCategoryData = {
-                    totalAmount: 0, amountByPeriod: {},
-                    totalSales: 0, salesByPeriod: {}
-                };
                 
-                let categoryHasData = categoryData.has(categoryKey);
-
-                if (categoryKey === '其他') {
-                    // "其他" 分類需要手動彙總
-                    products.forEach(p => {
-                        otherCategoryData.totalAmount += p.data.totalAmount;
-                        otherCategoryData.totalSales += p.data.totalSales;
-                        for (const period in p.data.amountByPeriod) {
-                            otherCategoryData.amountByPeriod[period] = (otherCategoryData.amountByPeriod[period] || 0) + p.data.amountByPeriod[period];
-                        }
-                        for (const period in p.data.salesByPeriod) {
-                            otherCategoryData.salesByPeriod[period] = (otherCategoryData.salesByPeriod[period] || 0) + p.data.salesByPeriod[period];
-                        }
-                    });
-                    // 將手動彙總的 "其他" 資料存入 categoryData 以便 drawChart 函式取用
-                    categoryData.set('其他', otherCategoryData);
-                    categoryHasData = true; // "其他" 分類現在有資料了
-                }
+                // **修正：移除手動的 '其他' 彙總，因為 handleFiles 已經會正確處理**
+                const categoryHasData = categoryData.has(categoryKey);
 
                 if (products.length === 0 && !categoryHasData) return; // 如果沒產品也沒分類資料，跳過
 
@@ -542,8 +477,18 @@
                         <input id="chk-${catKey}" data-key="${categoryKey}" data-type="category" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <label for="chk-${catKey}" class="ml-2 block text-sm font-bold text-gray-800">${categoryKey} (分類彙總)</label>
                     `;
-                    categoryDiv.querySelector('input').addEventListener('change', () => { // <-- 修改
-                        updateSelectAllCategoriesState();
+                    // **新** 點擊分類彙總時，同時選取/取消選取所有子項目
+                    categoryDiv.querySelector('input').addEventListener('change', (e) => { 
+                        const isChecked = e.target.checked;
+                        // 找到同一個 'container' 裡的所有 'product' 類型的 checkbox
+                        const productCheckboxes = container.querySelectorAll('input[data-type="product"]');
+                        
+                        productCheckboxes.forEach(chk => {
+                            chk.checked = isChecked;
+                        });
+                        
+                        updateSelectAllCategoriesState(); // 更新 "全選彙總"
+                        updateSelectAllProductsState();   // 更新 "全選單品" (因為子項被改變了)
                         drawChart();
                     });
                     container.appendChild(categoryDiv);
@@ -574,8 +519,30 @@
                             <input id="chk-${prodKey}" data-key="${key}" data-type="product" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                             <label for="chk-${prodKey}" class="ml-2 block text-sm text-gray-800 truncate" title="${label}">${label}</label>
                         `;
-                        div.querySelector('input').addEventListener('change', () => { // <-- 修改
-                            updateSelectAllProductsState();
+                        // **新** D點擊子項目時，檢查是否需要更新父項 (分類彙總) 的狀態
+                        div.querySelector('input').addEventListener('change', () => { 
+                            const parentCategoryCheckbox = container.querySelector('input[data-type="category"]');
+                            
+                            if (parentCategoryCheckbox) {
+                                // 找到所有同層級的子項目
+                                const allProductCheckboxesInGroup = container.querySelectorAll('input[data-type="product"]');
+                                const allChecked = [...allProductCheckboxesInGroup].every(chk => chk.checked);
+                                const noneChecked = [...allProductCheckboxesInGroup].every(chk => !chk.checked);
+                                
+                                if (allChecked) {
+                                    parentCategoryCheckbox.checked = true;
+                                    parentCategoryCheckbox.indeterminate = false;
+                                } else if (noneChecked) {
+                                    parentCategoryCheckbox.checked = false;
+                                    parentCategoryCheckbox.indeterminate = false;
+                                } else {
+                                    parentCategoryCheckbox.checked = false;
+                                    parentCategoryCheckbox.indeterminate = true; // 顯示 "部分選取"
+                                }
+                            }
+                            
+                            updateSelectAllProductsState();   // 更新 "全選單品"
+                            updateSelectAllCategoriesState(); // 更新 "全選彙總" (因為父項可能被改變了)
                             drawChart();
                         });
                         productListDiv.appendChild(div);
@@ -688,9 +655,9 @@
             inactiveTabs.forEach(tab => tab.classList.remove('active'));
             inactiveContents.forEach(content => content.classList.add('hidden'));
         }
-        tabReport.addEventListener('click', () => switchTab(tabReport, contentReport, [tabChart, tabAi], [contentChart, contentAi]));
-        tabChart.addEventListener('click', () => switchTab(tabChart, contentChart, [tabReport, tabAi], [contentReport, contentAi]));
-        tabAi.addEventListener('click', () => switchTab(tabAi, contentAi, [tabReport, tabChart], [contentReport, contentAi]));
+        tabReport.addEventListener('click', () => switchTab(tabReport, contentReport, [tabChart], [contentChart])); /* 移除 tabAi, contentAi */
+        tabChart.addEventListener('click', () => switchTab(tabChart, contentChart, [tabReport], [contentReport])); /* 移除 tabAi, contentAi */
+        /* 移除 tabAi 事件監聽 */
         
         // --- 匯出功能 ---
         exportBtn.addEventListener('click', () => {
@@ -708,155 +675,9 @@
             XLSX.writeFile(wb, "產品總銷售彙總報表.xlsx");
         });
 
-        // --- Gemini AI 分析功能 (已升級) ---
-        generateAiBtn.addEventListener('click', generateAiInsight);
-
-        async function generateAiInsight() {
-            if (!processedData || processedData.size === 0 || !categoryData || categoryData.size === 0 || allPeriods.length === 0) {
-                alert("請先上傳並處理銷售資料，AI 分析需要彙總資料與分類資料才能運作。");
-                return;
-            }
-            
-            aiLoading.classList.remove('hidden');
-            aiResult.classList.add('hidden');
-            aiResult.innerHTML = '';
-            
-            // --- 1. 準備更豐富的數據給 AI ---
-
-            // 1.1 彙總品項 (分類) 的經營狀況
-            const categorySummary = [...categoryData.entries()]
-                .map(([name, data]) => ({ 
-                    category: name, 
-                    totalSales: data.totalSales, 
-                    totalAmount: data.totalAmount,
-                    // 計算平均售價 (ASP)
-                    asp: data.totalSales > 0 ? (data.totalAmount / data.totalSales).toFixed(0) : 0 
-                }))
-                .sort((a, b) => b.totalAmount - a.totalAmount); // 依總額排序
-
-            // 1.2 每個總類的明星商品前 5 名 (依銷售額)
-            const productsByCategory = new Map();
-            [...processedData.entries()].forEach(([id, data]) => {
-                const categoryKey = data.category || '其他';
-                if (!productsByCategory.has(categoryKey)) {
-                    productsByCategory.set(categoryKey, []);
-                }
-                productsByCategory.get(categoryKey).push({ id, ...data });
-            });
-
-            const starProductsPerCategory = {};
-            productsByCategory.forEach((products, category) => {
-                const sortedProducts = [...products].sort((a, b) => b.totalAmount - a.totalAmount); // 依總額排序
-                starProductsPerCategory[category] = sortedProducts.slice(0, 5).map(p => ({ 
-                    name: p.name, 
-                    totalAmount: p.totalAmount, 
-                    totalSales: p.totalSales 
-                }));
-            });
-
-            // 1.3 持續有賣出的商品
-            const totalPeriods = allPeriods.length;
-            let continuousSellers = [];
-            if (totalPeriods > 1) {
-                continuousSellers = [...processedData.entries()]
-                    // 篩選出在所有時間點都有銷售紀錄的商品
-                    .filter(([id, data]) => Object.keys(data.salesByPeriod).length === totalPeriods)
-                    .map(([id, data]) => ({ 
-                        name: data.name, 
-                        totalSales: data.totalSales, 
-                        totalAmount: data.totalAmount 
-                    }))
-                    .sort((a, b) => b.totalAmount - a.totalAmount); // 依總額排序
-            }
-
-            // --- 2. 建立新的 AI 提示 ---
-
-            const systemPrompt = "你是位於台灣苗栗的卡牌與動漫周邊零售店的專業銷售分析師。你的分析必須精闢、專業，並提供可執行的建議。請使用繁體中文回應。";
-            
-            const userQuery = `
-                請根據我提供的銷售彙總數據，分析我店內的經營狀況。
-                目前日期：2025年10月23日。
-                分析期間：${allPeriods[0]} 至 ${allPeriods[allPeriods.length - 1]} (共 ${totalPeriods} 個時段)。
-
-                --- 提供的數據 ---
-
-                1.  **彙總品項 (分類) 經營數據 (依總銷售額排序):**
-                    ${JSON.stringify(categorySummary, null, 2)}
-
-                2.  **每個分類的明星商品 Top 5 (依總銷售額排序):**
-                    ${JSON.stringify(starProductsPerCategory, null, 2)}
-
-                3.  **持續熱賣的商品 (在所有 ${totalPeriods} 個時段都有銷售紀錄，依總額排序):**
-                    ${(continuousSellers.length > 0) ? JSON.stringify(continuousSellers.slice(0, 15), null, 2) : " (無商品在所有時段都有銷售紀錄)"}
-
-                --- 請依據以上數據，並使用 Google 搜尋當前的市場趨勢，提供以下分析 (請使用 Markdown 格式) ---
-
-                1.  **每個彙總品項的經營狀況：**
-                    * 請逐一點評「彙總品項經營數據」中的主要分類。
-                    * 分析它們是「高銷量/低單價」(薄利多銷) 還是「低銷量/高單價」(高價值商品)？
-                    * 哪些分類是我們的金雞母？哪些是需要關注的？
-
-                2.  **持續有賣出的商品：**
-                    * 分析「持續熱賣的商品」列表。
-                    * 這些商品扮演什麼角色 (例如：穩定客源的必需品、高人氣商品)？
-                    * 我們該如何利用這些商品？
-
-                3.  **每個總類的明星商品前 5：**
-                    * 請查看「每個分類的明星商品 Top 5」數據。
-                    * 指出幾個最值得注意的「明星中的明星」。
-                    * 是否有「一枝獨秀」(某商品佔該分類極高比例) 的現象？
-
-                4.  **建議增加的商品類型：**
-                    * 基於數據和市場趨勢 (例如遊戲王、寶可夢、航海王、HoloLive等的近期熱門商品)，建議我們應該「增加」或「引進」哪些商品類型或特定商品？
-
-                5.  **建議減量的商品類型：**
-                    * 哪些商品類型或特定商品，從數據和趨勢來看，可能已經退燒或利潤不佳，建議我們應該「減少庫存」或「停止進貨」？
-
-                6.  **綜合建議：**
-                    * 總結以上分析，提供 3-5 點最關鍵的營運策略建議 (例如：庫存調整、行銷組合、商品陳列或搭售建議)。
-            `;
-
-            try {
-                const apiKey = ""; // API key is handled by the environment.
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
-                    tools: [{ "google_search": {} }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] }
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
-                }
-
-                const result = await response.json();
-                const candidate = result.candidates?.[0];
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const aiText = candidate.content.parts[0].text;
-                    aiResult.innerHTML = markdownConverter.makeHtml(aiText);
-                } else {
-                    throw new Error("從 AI 收到的回應格式不正確。");
-                }
-            } catch (error) {
-                console.error("Gemini API 呼叫失敗:", error);
-                aiResult.innerHTML = `<p class="text-red-600">抱歉，AI 分析時發生錯誤。請稍後再試一次。<br><span class="text-sm text-gray-500">${error.message}</span></p>`;
-            } finally {
-                aiLoading.classList.add('hidden');
-                aiResult.classList.remove('hidden');
-            }
-        }
+        /* 移除所有 Gemini AI 相關功能 */
     </script>
 </body>
 </html>
-
-
-
 
 

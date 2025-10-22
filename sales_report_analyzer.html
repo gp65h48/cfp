@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>銷售報表分析工具 (Gemini ✨)</title>
+    <!-- 引入 Tailwind CSS 以美化介面 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SheetJS (xlsx.js) 用於讀取 Excel 檔案 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- 引入 Chart.js 用於繪製圖表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 Showdown.js 將 Markdown 轉為 HTML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <style>
+        /* 自訂樣式，讓介面更美觀 */
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            border-color: #3B82F6; /* blue-500 */
+            color: #3B82F6;
+            background-color: #EFF6FF; /* blue-50 */
+        }
+        #drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        #drop-zone.dragover {
+            background-color: #f0f9ff;
+            border-color: #3b82f6;
+        }
+        /* AI 結果區域的樣式 */
+        #ai-result h3 {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            margin-top: 1.25rem; /* mt-5 */
+            margin-bottom: 0.5rem; /* mb-2 */
+            padding-bottom: 0.25rem; /* pb-1 */
+            border-bottom: 1px solid #e5e7eb; /* border-b */
+        }
+        #ai-result ul {
+            list-style-type: disc;
+            padding-left: 1.5rem; /* pl-6 */
+            margin-top: 0.5rem; /* mt-2 */
+        }
+        #ai-result li {
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+        #ai-result p {
+            margin-bottom: 0.75rem; /* mb-3 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8">
+        
+        <!-- 標題區 -->
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-800">銷售報表分析工具 (Gemini ✨)</h1>
+            <p class="text-gray-500 mt-2">請上傳您的 Excel 銷售報表，系統將自動彙總資料、產生圖表，並提供 AI 銷售洞察。</p>
+        </header>
+
+        <!-- 檔案上傳區 -->
+        <div id="upload-section" class="mb-8">
+            <div id="drop-zone">
+                <p class="text-gray-600">將檔案拖曳至此，或 <span class="text-blue-500 font-semibold">點擊此處</span> 選擇檔案</p>
+                <input type="file" id="file-input" multiple accept=".xlsx, .xls, .csv" class="hidden">
+            </div>
+            <div id="file-list" class="mt-4 text-sm text-gray-700"></div>
+        </div>
+
+        <!-- 處理中提示 -->
+        <div id="loading" class="hidden text-center my-8">
+            <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-2 text-gray-600">正在處理資料，請稍候...</p>
+        </div>
+
+        <!-- 結果顯示區 (預設隱藏) -->
+        <div id="result-section" class="hidden">
+            <!-- 分頁按鈕 -->
+            <div class="border-b border-gray-200 mb-6">
+                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button id="tab-report" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                        總銷售報表
+                    </button>
+                    <button id="tab-chart" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                        趨勢圖表
+                    </button>
+                    <button id="tab-ai" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                        AI 分析與建議 ✨
+                    </button>
+                </nav>
+            </div>
+
+            <!-- 分頁內容 -->
+            <div>
+                <!-- 報表分頁 -->
+                <div id="content-report">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-700">產品總銷售彙總</h2>
+                        <button id="export-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition">匯出成 Excel</button>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">品號</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">品名</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分類</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">總銷售淨量</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">總銷售淨額</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- 資料將由 JavaScript 動態填入 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 圖表分頁 (預設隱藏) -->
+                <div id="content-chart" class="hidden">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">產品銷售趨勢 (支援疊圖)</h2>
+                    
+                    <!-- Y軸維度選擇 -->
+                    <fieldset class="mb-4">
+                        <legend class="block text-sm font-medium text-gray-700 mb-1">選擇 Y 軸維度：</legend>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2">
+                            <div class="flex items-center">
+                                <input id="mode-amount" name="chart-mode" type="radio" value="amount" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                <label for="mode-amount" class="ml-2 block text-sm text-gray-900">銷售總額</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="mode-quantity" name="chart-mode" type="radio" value="quantity" checked class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                <label for="mode-quantity" class="ml-2 block text-sm text-gray-900">銷售數量</label>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- 項目選擇 (複選) -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-gray-700">選擇比較項目 (可選分類彙總或單品)：</label>
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center">
+                                    <input id="select-all-categories" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="select-all-categories" class="ml-2 block text-sm font-medium text-gray-700">全選彙總</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input id="select-all-products" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="select-all-products" class="ml-2 block text-sm font-medium text-gray-700">全選單品</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="chart-item-selection" class="max-h-60 overflow-y-auto border rounded-md p-3 bg-gray-50 space-y-1">
+                            <!-- 選項將由 JavaScript 動態填入 -->
+                        </div>
+                    </div>
+
+                    <div class="relative h-[60vh] w-full"> <!-- 增加圖表高度 -->
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- AI 分析分頁 (預設隱藏) -->
+                <div id="content-ai" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-700">Gemini 銷售洞察</h2>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                         <button id="generate-ai-insight-btn" class="w-full px-4 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-md flex items-center justify-center">
+                            <span class="text-2xl mr-2">✨</span> 產生銷售分析與建議
+                        </button>
+                        <div id="ai-loading" class="hidden text-center my-8">
+                            <svg class="animate-spin h-6 w-6 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-2 text-gray-600 text-sm">Gemini 正在分析您的數據，請稍候...</p>
+                        </div>
+                        <div id="ai-result" class="mt-4 text-gray-800 bg-white p-4 rounded-md border hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素獲取
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const fileListDiv = document.getElementById('file-list');
+        const loadingDiv = document.getElementById('loading');
+        const resultSection = document.getElementById('result-section');
+        const reportTableBody = document.getElementById('report-table-body');
+        const salesChartCanvas = document.getElementById('sales-chart');
+        const exportBtn = document.getElementById('export-btn');
+        const chartItemSelection = document.getElementById('chart-item-selection');
+        const selectAllCategoriesCheckbox = document.getElementById('select-all-categories');
+        const selectAllProductsCheckbox = document.getElementById('select-all-products');
+
+        const tabReport = document.getElementById('tab-report');
+        const tabChart = document.getElementById('tab-chart');
+        const tabAi = document.getElementById('tab-ai');
+        const contentReport = document.getElementById('content-report');
+        const contentChart = document.getElementById('content-chart');
+        const contentAi = document.getElementById('content-ai');
+        
+        const generateAiBtn = document.getElementById('generate-ai-insight-btn');
+        const aiLoading = document.getElementById('ai-loading');
+        const aiResult = document.getElementById('ai-result');
+
+        // 全域變數
+        let chartInstance = null;
+        let processedData = null; // Map<productId, {name, category, totalSales, totalAmount, salesByPeriod, amountByPeriod}>
+        let categoryData = new Map(); // Map<categoryName, {totalAmount, amountByPeriod, totalSales, salesByPeriod}>
+        let allPeriods = [];
+        const markdownConverter = new showdown.Converter();
+        // 圖表顏色池
+        const CHART_COLORS = ['#3B82F6', '#10B981', '#EF4444', '#F59E0B', '#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#D946EF', '#0EA5E9'];
+
+        // --- 拖曳功能 ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            handleFiles(fileInput.files);
+        });
+
+        // --- 檔案處理核心邏輯 ---
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            resetUI();
+            loadingDiv.classList.remove('hidden');
+
+            fileListDiv.innerHTML = `<p class="font-semibold mb-1">已選擇檔案 (${files.length}):</p><ul>` +
+                [...files].map(f => `<li class="ml-4 list-disc">${f.name}</li>`).join('') + '</ul>';
+
+            // 重置資料
+            processedData = new Map();
+            categoryData = new Map();
+            allPeriods = [];
+            const periodsSet = new Set();
+
+            for (const file of files) {
+                const period = parsePeriodFromFilename(file.name);
+                if (!period) { console.warn(`無法從檔名 ${file.name} 解析時間，已跳過。`); continue; }
+                periodsSet.add(period); // 收集所有時間點
+                
+                try {
+                    const data = await readFile(file);
+                    data.forEach(row => {
+                        const productId = row['品號'] || '未知品號';
+                        const productName = row['品名'] || '未知品名';
+                        const salesQuantity = Number(row['銷貨淨量']) || 0;
+                        const salesAmount = Number(row['銷貨淨額']) || 0; // **新** 讀取銷售額
+                        const category = getCategoryFromName(productName); // **新** 獲取分類
+
+                        // 1. 處理產品資料 (productData)
+                        if (!processedData.has(productId)) {
+                            processedData.set(productId, { 
+                                name: productName, 
+                                category: category,
+                                totalSales: 0, 
+                                totalAmount: 0, 
+                                salesByPeriod: {}, 
+                                amountByPeriod: {} 
+                            });
+                        }
+                        const existingProduct = processedData.get(productId);
+                        existingProduct.totalSales += salesQuantity;
+                        existingProduct.totalAmount += salesAmount;
+                        existingProduct.salesByPeriod[period] = (existingProduct.salesByPeriod[period] || 0) + salesQuantity;
+                        existingProduct.amountByPeriod[period] = (existingProduct.amountByPeriod[period] || 0) + salesAmount;
+
+                        // 2. 處理分類資料 (categoryData) - 僅在有分類時
+                        if (category) {
+                            if (!categoryData.has(category)) {
+                                categoryData.set(category, { 
+                                    totalAmount: 0, 
+                                    amountByPeriod: {},
+                                    totalSales: 0, // **新**
+                                    salesByPeriod: {} // **新**
+                                });
+                            }
+                            const existingCategory = categoryData.get(category);
+                            existingCategory.totalAmount += salesAmount;
+                            existingCategory.amountByPeriod[period] = (existingCategory.amountByPeriod[period] || 0) + salesAmount;
+                            existingCategory.totalSales += salesQuantity; // **新**
+                            existingCategory.salesByPeriod[period] = (existingCategory.salesByPeriod[period] || 0) + salesQuantity; // **新**
+                        }
+                    });
+                } catch (error) {
+                    console.error(`處理檔案 ${file.name} 時發生錯誤:`, error);
+                    alert(`處理檔案 ${file.name} 失敗，請檢查檔案格式。`);
+                }
+            }
+            
+            allPeriods = [...periodsSet].sort(); // 排序所有時間點
+            
+            setTimeout(() => {
+                loadingDiv.classList.add('hidden');
+                if (processedData.size > 0) {
+                    resultSection.classList.remove('hidden');
+                    populateReportTable(processedData);
+                    setupChartListeners(); // 設定圖表監聽器
+                    populateChartSelection(); // 首次填入圖表選項
+                } else {
+                    fileListDiv.innerHTML += '<p class="text-red-500 mt-4">未讀取到有效資料。</p>';
+                }
+            }, 500);
+        }
+
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                        const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                        resolve(json);
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function parsePeriodFromFilename(filename) {
+            const match = filename.match(/(\d{4})(Q\d|\d{2})/);
+            if (!match) return null;
+            const year = match[1];
+            let period = match[2];
+            if (period.startsWith('Q')) {
+                const quarterMonth = { 'Q1': '03', 'Q2': '06', 'Q3': '09', 'Q4': '12' };
+                return `${year}-${quarterMonth[period]}`;
+            }
+            return `${year}-${period}`;
+        }
+        
+        /** 從品名中提取分類 (例如 "hOCG_...") */
+        function getCategoryFromName(name) {
+            if (typeof name !== 'string') return null;
+            const parts = name.split('_');
+            // 檢查第一部分是否僅包含英數字元且不為空
+            if (parts.length > 1 && parts[0].match(/^[a-zA-Z0-9]+$/)) {
+                return parts[0];
+            }
+            return null; // 若無底線或格式不符則無分類
+        }
+        
+        function resetUI() {
+            resultSection.classList.add('hidden');
+            reportTableBody.innerHTML = '';
+            chartItemSelection.innerHTML = '';
+            fileListDiv.innerHTML = '';
+            aiResult.innerHTML = '';
+            aiResult.classList.add('hidden');
+            if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+        }
+
+        function populateReportTable(data) {
+            reportTableBody.innerHTML = '';
+            // 同時按銷售額排序
+            const sortedData = [...data.entries()].sort((a, b) => b[1].totalAmount - a[1].totalAmount);
+            for (const [id, info] of sortedData) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${info.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${info.category || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${info.totalSales.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-bold">${info.totalAmount.toLocaleString()}</td>
+                `;
+                reportTableBody.appendChild(row);
+            }
+        }
+
+        // --- 圖表功能 (重構) ---
+        function setupChartListeners() {
+            document.querySelectorAll('input[name="chart-mode"]').forEach(radio => {
+                radio.addEventListener('change', populateChartSelection);
+            });
+            selectAllCategoriesCheckbox.addEventListener('change', toggleSelectAllCategories);
+            selectAllProductsCheckbox.addEventListener('change', toggleSelectAllProducts);
+        }
+        
+        /** "全選彙總" 複選框的邏輯 */
+        function toggleSelectAllCategories(e) {
+            const isChecked = e.target.checked;
+            const allCategoryCheckboxes = document.querySelectorAll('#chart-item-selection input[data-type="category"]');
+            allCategoryCheckboxes.forEach(chk => {
+                chk.checked = isChecked;
+            });
+            selectAllCategoriesCheckbox.indeterminate = false; 
+            drawChart();
+        }
+
+        /** "全選單品" 複選框的邏輯 */
+        function toggleSelectAllProducts(e) {
+            const isChecked = e.target.checked;
+            const allProductCheckboxes = document.querySelectorAll('#chart-item-selection input[data-type="product"]');
+            allProductCheckboxes.forEach(chk => {
+                chk.checked = isChecked;
+            });
+            selectAllProductsCheckbox.indeterminate = false; 
+            drawChart();
+        }
+
+        /** 更新 "全選彙總" 複選框的狀態 */
+        function updateSelectAllCategoriesState() {
+            const allCategoryCheckboxes = document.querySelectorAll('#chart-item-selection input[data-type="category"]');
+            if (allCategoryCheckboxes.length === 0) {
+                selectAllCategoriesCheckbox.checked = false;
+                selectAllCategoriesCheckbox.indeterminate = false;
+                return;
+            }
+            const allChecked = [...allCategoryCheckboxes].every(chk => chk.checked);
+            const noneChecked = [...allCategoryCheckboxes].every(chk => !chk.checked);
+
+            if (allChecked) {
+                selectAllCategoriesCheckbox.checked = true;
+                selectAllCategoriesCheckbox.indeterminate = false;
+            } else if (noneChecked) {
+                selectAllCategoriesCheckbox.checked = false;
+                selectAllCategoriesCheckbox.indeterminate = false;
+            } else {
+                selectAllCategoriesCheckbox.checked = false;
+                selectAllCategoriesCheckbox.indeterminate = true;
+            }
+        }
+
+        /** 更新 "全選單品" 複選框的狀態 */
+        function updateSelectAllProductsState() {
+            const allProductCheckboxes = document.querySelectorAll('#chart-item-selection input[data-type="product"]');
+            if (allProductCheckboxes.length === 0) {
+                selectAllProductsCheckbox.checked = false;
+                selectAllProductsCheckbox.indeterminate = false;
+                return;
+            }
+            const allChecked = [...allProductCheckboxes].every(chk => chk.checked);
+            const noneChecked = [...allProductCheckboxes].every(chk => !chk.checked);
+
+            if (allChecked) {
+                selectAllProductsCheckbox.checked = true;
+                selectAllProductsCheckbox.indeterminate = false;
+            } else if (noneChecked) {
+                selectAllProductsCheckbox.checked = false;
+                selectAllProductsCheckbox.indeterminate = false;
+            } else {
+                selectAllProductsCheckbox.checked = false;
+                selectAllProductsCheckbox.indeterminate = true;
+            }
+        }
+
+        /** 依據選擇的模式，動態產生複選框 (支援兩層結構) */
+        function populateChartSelection() {
+            const mode = document.querySelector('input[name="chart-mode"]:checked').value;
+            chartItemSelection.innerHTML = ''; // 清空
+            
+            // 模式2 & 3: 依單一產品 (改為兩層結構)
+            const sortBy = (mode === 'amount') ? 'totalAmount' : 'totalSales';
+            
+            // 1. 將產品依分類分組
+            const productsByCategory = new Map();
+            productsByCategory.set('其他', []); // 預設「其他」分類
+
+            [...processedData.entries()].forEach(([id, data]) => {
+                const categoryKey = data.category || '其他';
+                if (!productsByCategory.has(categoryKey) && categoryKey !== '其他') {
+                    productsByCategory.set(categoryKey, []);
+                }
+                productsByCategory.get(categoryKey).push({ id, data, sortByValue: data[sortBy] });
+            });
+
+            // 2. 排序分類 (「其他」放最後)
+            const sortedCategoryKeys = [...productsByCategory.keys()].sort((a, b) => {
+                if (a === '其他') return 1;
+                if (b === '其他') return -1;
+                return a.localeCompare(b); // 其他按字母排序
+            });
+
+            // 3. 產生 結構
+            sortedCategoryKeys.forEach((categoryKey, index) => {
+                const products = productsByCategory.get(categoryKey);
+                // 即使分類下沒產品，只要 categoryData 有資料 (例如只有分類彙總)，也可能要顯示
+                // "其他" 分類要特別處理，因為它沒有自己的 categoryData 項目，但仍需彙總
+                const otherCategoryData = {
+                    totalAmount: 0, amountByPeriod: {},
+                    totalSales: 0, salesByPeriod: {}
+                };
+                
+                let categoryHasData = categoryData.has(categoryKey);
+
+                if (categoryKey === '其他') {
+                    // "其他" 分類需要手動彙總
+                    products.forEach(p => {
+                        otherCategoryData.totalAmount += p.data.totalAmount;
+                        otherCategoryData.totalSales += p.data.totalSales;
+                        for (const period in p.data.amountByPeriod) {
+                            otherCategoryData.amountByPeriod[period] = (otherCategoryData.amountByPeriod[period] || 0) + p.data.amountByPeriod[period];
+                        }
+                        for (const period in p.data.salesByPeriod) {
+                            otherCategoryData.salesByPeriod[period] = (otherCategoryData.salesByPeriod[period] || 0) + p.data.salesByPeriod[period];
+                        }
+                    });
+                    // 將手動彙總的 "其他" 資料存入 categoryData 以便 drawChart 函式取用
+                    categoryData.set('其他', otherCategoryData);
+                    categoryHasData = true; // "其他" 分類現在有資料了
+                }
+
+                if (products.length === 0 && !categoryHasData) return; // 如果沒產品也沒分類資料，跳過
+
+                // 排序分類內的產品
+                products.sort((a, b) => b.sortByValue - a.sortByValue); 
+
+                const container = document.createElement('div');
+                container.className = 'py-1';
+
+                // **新：第一層：分類彙總的 Checkbox**
+                if (categoryHasData) { 
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'flex items-center p-1 hover:bg-gray-200 rounded';
+                    const catKey = `CAT_${categoryKey}`;
+                    categoryDiv.innerHTML = `
+                        <input id="chk-${catKey}" data-key="${categoryKey}" data-type="category" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="chk-${catKey}" class="ml-2 block text-sm font-bold text-gray-800">${categoryKey} (分類彙總)</label>
+                    `;
+                    categoryDiv.querySelector('input').addEventListener('change', () => { // <-- 修改
+                        updateSelectAllCategoriesState();
+                        drawChart();
+                    });
+                    container.appendChild(categoryDiv);
+                }
+
+                // **新：第二層：產品的 <details> 結構**
+                if (products.length > 0) {
+                    const details = document.createElement('details');
+                    details.className = 'pl-4'; // 縮排
+                    
+                    const summary = document.createElement('summary');
+                    summary.className = 'text-sm text-gray-600 cursor-pointer p-1 rounded list-item'; // 使用 list-item 顯示箭頭
+                    summary.textContent = `展開/摺疊 ${categoryKey} 的 ${products.length} 個單品`;
+                    details.appendChild(summary);
+                    
+                    const productListDiv = document.createElement('div');
+                    productListDiv.className = 'pl-6 pt-1 space-y-1'; // 再次縮排
+
+                    // 4. 產生產品的 Checkbox
+                    products.forEach(({ id, data }) => {
+                        const key = id;
+                        const label = `${data.name} (${id})`;
+                        const prodKey = `PROD_${key}`;
+                        
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center';
+                        div.innerHTML = `
+                            <input id="chk-${prodKey}" data-key="${key}" data-type="product" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="chk-${prodKey}" class="ml-2 block text-sm text-gray-800 truncate" title="${label}">${label}</label>
+                        `;
+                        div.querySelector('input').addEventListener('change', () => { // <-- 修改
+                            updateSelectAllProductsState();
+                            drawChart();
+                        });
+                        productListDiv.appendChild(div);
+                    });
+                    
+                    details.appendChild(productListDiv);
+                    container.appendChild(details);
+                }
+                
+                chartItemSelection.appendChild(container);
+            });
+            
+            updateSelectAllCategoriesState();
+            updateSelectAllProductsState();
+            drawChart(); // 切換模式時清空並重繪圖表
+        }
+
+        /** 繪製圖表 (支援疊圖) */
+        function drawChart() {
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const mode = document.querySelector('input[name="chart-mode"]:checked').value;
+            const selectedInputs = Array.from(document.querySelectorAll('#chart-item-selection input:checked'));
+            const yAxisLabel = mode === 'amount' ? '銷售總額' : '銷售數量';
+            const datasets = [];
+
+            selectedInputs.forEach((input, index) => {
+                const key = input.dataset.key;
+                const type = input.dataset.type;
+                const color = CHART_COLORS[index % CHART_COLORS.length];
+                
+                let dataPoints = [];
+                let label = '';
+                
+                if (type === 'category') {
+                    // "其他" 分類已在 populateChartSelection 中被計算並存入 categoryData
+                    const category = categoryData.get(key); 
+                    if (category) {
+                        label = `${key} (彙總)`;
+                        dataPoints = (mode === 'amount') 
+                            ? allPeriods.map(p => category.amountByPeriod[p] || 0)
+                            : allPeriods.map(p => category.salesByPeriod[p] || 0);
+                    }
+                } else if (type === 'product') {
+                    const product = processedData.get(key);
+                    if (product) {
+                        label = product.name;
+                        dataPoints = (mode === 'amount')
+                            ? allPeriods.map(p => product.amountByPeriod[p] || 0)
+                            : allPeriods.map(p => product.salesByPeriod[p] || 0);
+                    }
+                }
+                
+                datasets.push({
+                    label: label,
+                    data: dataPoints,
+                    borderColor: color,
+                    backgroundColor: `${color}33`, // 帶透明度的背景色
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                });
+            }); // <-- 這是修復點 1
+
+            // 創建圖表
+            chartInstance = new Chart(salesChartCanvas.getContext('2d'), {
+                type: 'line',
+                data: { 
+                    labels: allPeriods, 
+                    datasets: datasets 
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: yAxisLabel, font: { size: 14 } }
+                        },
+                        x: {
+                            title: { display: true, text: '時間 (年-月/季)', font: { size: 14 } }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            itemSort: (a, b) => b.raw - a.raw, // <-- 新增：Tooltip 項目依數值(raw value)由大到小排序
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        } // <-- 這是修復點 2
+
+        // --- 分頁切換 ---
+        function switchTab(activeTab, activeContent, inactiveTabs, inactiveContents) {
+            activeTab.classList.add('active');
+            activeContent.classList.remove('hidden');
+            inactiveTabs.forEach(tab => tab.classList.remove('active'));
+            inactiveContents.forEach(content => content.classList.add('hidden'));
+        }
+        tabReport.addEventListener('click', () => switchTab(tabReport, contentReport, [tabChart, tabAi], [contentChart, contentAi]));
+        tabChart.addEventListener('click', () => switchTab(tabChart, contentChart, [tabReport, tabAi], [contentReport, contentAi]));
+        tabAi.addEventListener('click', () => switchTab(tabAi, contentAi, [tabReport, tabChart], [contentReport, contentAi]));
+        
+        // --- 匯出功能 ---
+        exportBtn.addEventListener('click', () => {
+            if (!processedData || processedData.size === 0) { alert("沒有資料可以匯出。"); return; }
+            // 匯出資料也加入分類和總額
+            const dataToExport = [
+                ['品號', '品名', '分類', '總銷售淨量', '總銷售淨額'], 
+                ...[...processedData.entries()]
+                    .sort((a, b) => b[1].totalAmount - a[1].totalAmount) // 依總額排序
+                    .map(([id, info]) => [id, info.name, info.category || 'N/A', info.totalSales, info.totalAmount])
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "總銷售彙總報表");
+            XLSX.writeFile(wb, "產品總銷售彙總報表.xlsx");
+        });
+
+        // --- Gemini AI 分析功能 (已升級) ---
+        generateAiBtn.addEventListener('click', generateAiInsight);
+
+        async function generateAiInsight() {
+            if (!processedData || processedData.size === 0 || !categoryData || categoryData.size === 0 || allPeriods.length === 0) {
+                alert("請先上傳並處理銷售資料，AI 分析需要彙總資料與分類資料才能運作。");
+                return;
+            }
+            
+            aiLoading.classList.remove('hidden');
+            aiResult.classList.add('hidden');
+            aiResult.innerHTML = '';
+            
+            // --- 1. 準備更豐富的數據給 AI ---
+
+            // 1.1 彙總品項 (分類) 的經營狀況
+            const categorySummary = [...categoryData.entries()]
+                .map(([name, data]) => ({ 
+                    category: name, 
+                    totalSales: data.totalSales, 
+                    totalAmount: data.totalAmount,
+                    // 計算平均售價 (ASP)
+                    asp: data.totalSales > 0 ? (data.totalAmount / data.totalSales).toFixed(0) : 0 
+                }))
+                .sort((a, b) => b.totalAmount - a.totalAmount); // 依總額排序
+
+            // 1.2 每個總類的明星商品前 5 名 (依銷售額)
+            const productsByCategory = new Map();
+            [...processedData.entries()].forEach(([id, data]) => {
+                const categoryKey = data.category || '其他';
+                if (!productsByCategory.has(categoryKey)) {
+                    productsByCategory.set(categoryKey, []);
+                }
+                productsByCategory.get(categoryKey).push({ id, ...data });
+            });
+
+            const starProductsPerCategory = {};
+            productsByCategory.forEach((products, category) => {
+                const sortedProducts = [...products].sort((a, b) => b.totalAmount - a.totalAmount); // 依總額排序
+                starProductsPerCategory[category] = sortedProducts.slice(0, 5).map(p => ({ 
+                    name: p.name, 
+                    totalAmount: p.totalAmount, 
+                    totalSales: p.totalSales 
+                }));
+            });
+
+            // 1.3 持續有賣出的商品
+            const totalPeriods = allPeriods.length;
+            let continuousSellers = [];
+            if (totalPeriods > 1) {
+                continuousSellers = [...processedData.entries()]
+                    // 篩選出在所有時間點都有銷售紀錄的商品
+                    .filter(([id, data]) => Object.keys(data.salesByPeriod).length === totalPeriods)
+                    .map(([id, data]) => ({ 
+                        name: data.name, 
+                        totalSales: data.totalSales, 
+                        totalAmount: data.totalAmount 
+                    }))
+                    .sort((a, b) => b.totalAmount - a.totalAmount); // 依總額排序
+            }
+
+            // --- 2. 建立新的 AI 提示 ---
+
+            const systemPrompt = "你是位於台灣苗栗的卡牌與動漫周邊零售店的專業銷售分析師。你的分析必須精闢、專業，並提供可執行的建議。請使用繁體中文回應。";
+            
+            const userQuery = `
+                請根據我提供的銷售彙總數據，分析我店內的經營狀況。
+                目前日期：2025年10月23日。
+                分析期間：${allPeriods[0]} 至 ${allPeriods[allPeriods.length - 1]} (共 ${totalPeriods} 個時段)。
+
+                --- 提供的數據 ---
+
+                1.  **彙總品項 (分類) 經營數據 (依總銷售額排序):**
+                    ${JSON.stringify(categorySummary, null, 2)}
+
+                2.  **每個分類的明星商品 Top 5 (依總銷售額排序):**
+                    ${JSON.stringify(starProductsPerCategory, null, 2)}
+
+                3.  **持續熱賣的商品 (在所有 ${totalPeriods} 個時段都有銷售紀錄，依總額排序):**
+                    ${(continuousSellers.length > 0) ? JSON.stringify(continuousSellers.slice(0, 15), null, 2) : " (無商品在所有時段都有銷售紀錄)"}
+
+                --- 請依據以上數據，並使用 Google 搜尋當前的市場趨勢，提供以下分析 (請使用 Markdown 格式) ---
+
+                1.  **每個彙總品項的經營狀況：**
+                    * 請逐一點評「彙總品項經營數據」中的主要分類。
+                    * 分析它們是「高銷量/低單價」(薄利多銷) 還是「低銷量/高單價」(高價值商品)？
+                    * 哪些分類是我們的金雞母？哪些是需要關注的？
+
+                2.  **持續有賣出的商品：**
+                    * 分析「持續熱賣的商品」列表。
+                    * 這些商品扮演什麼角色 (例如：穩定客源的必需品、高人氣商品)？
+                    * 我們該如何利用這些商品？
+
+                3.  **每個總類的明星商品前 5：**
+                    * 請查看「每個分類的明星商品 Top 5」數據。
+                    * 指出幾個最值得注意的「明星中的明星」。
+                    * 是否有「一枝獨秀」(某商品佔該分類極高比例) 的現象？
+
+                4.  **建議增加的商品類型：**
+                    * 基於數據和市場趨勢 (例如遊戲王、寶可夢、航海王、HoloLive等的近期熱門商品)，建議我們應該「增加」或「引進」哪些商品類型或特定商品？
+
+                5.  **建議減量的商品類型：**
+                    * 哪些商品類型或特定商品，從數據和趨勢來看，可能已經退燒或利潤不佳，建議我們應該「減少庫存」或「停止進貨」？
+
+                6.  **綜合建議：**
+                    * 總結以上分析，提供 3-5 點最關鍵的營運策略建議 (例如：庫存調整、行銷組合、商品陳列或搭售建議)。
+            `;
+
+            try {
+                const apiKey = ""; // API key is handled by the environment.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const aiText = candidate.content.parts[0].text;
+                    aiResult.innerHTML = markdownConverter.makeHtml(aiText);
+                } else {
+                    throw new Error("從 AI 收到的回應格式不正確。");
+                }
+            } catch (error) {
+                console.error("Gemini API 呼叫失敗:", error);
+                aiResult.innerHTML = `<p class="text-red-600">抱歉，AI 分析時發生錯誤。請稍後再試一次。<br><span class="text-sm text-gray-500">${error.message}</span></p>`;
+            } finally {
+                aiLoading.classList.add('hidden');
+                aiResult.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+

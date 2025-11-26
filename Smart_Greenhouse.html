@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧溫室 V7.1 (完整修復版)</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; }
+        
+        /* UI 面板 */
+        .panel {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: auto;
+        }
+
+        #info-panel { top: 20px; left: 20px; width: 320px; border-left: 5px solid #FFC107; }
+        #control-panel { top: 20px; right: 20px; width: 350px; max-height: 90vh; overflow-y: auto; border-right: 5px solid #FF9800; }
+        #climate-panel { bottom: 20px; left: 50%; transform: translateX(-50%); width: 400px; text-align: center; border-top: 5px solid #E91E63; }
+
+        h2 { margin: 0 0 10px 0; font-size: 16px; color: #FFC107; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; }
+        h2::before { content: '⚡'; margin-right: 8px; }
+        
+        .section-header { font-size: 12px; color: #aaa; margin-top: 15px; border-bottom: 1px solid #444; padding-bottom: 3px; margin-bottom: 8px; font-weight: bold; }
+        
+        .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 12px; }
+        .legend-item { display: flex; align-items: center; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+        /* 能耗顯示區 */
+        .power-box {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #FFC107;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .power-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }
+        .power-val { font-weight: bold; font-family: monospace; font-size: 14px; color: #FFC107; }
+
+        label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; color: #ddd; }
+        input[type=range] { width: 100%; margin-bottom: 10px; cursor: pointer; accent-color: #FFC107; }
+        select { width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px; }
+        
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        button {
+            padding: 10px; border: none; border-radius: 4px; 
+            background: #444; color: white; cursor: pointer; font-weight: bold; font-size: 12px;
+            transition: 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        button:hover { background: #555; }
+        
+        .active-water { background: #2196F3 !important; }
+        .active-fert { background: #4CAF50 !important; }
+        .active-fan { background: #FF5722 !important; }
+        .active-pad { background: #3F51B5 !important; }
+        .active-cir { background: #FF9800 !important; }
+        .active-transform { background: #FF9800 !important; color: #000 !important; }
+        .active-light { background: #E040FB !important; box-shadow: 0 0 15px #E040FB; }
+
+        #sun-display { text-align: center; font-size: 16px; color: #FFD54F; font-weight: bold; margin-bottom: 10px; }
+
+        .climate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+        .climate-box { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; }
+        .climate-label { font-size: 11px; color: #aaa; }
+        .climate-value { font-size: 20px; font-weight: bold; font-family: monospace; }
+        .temp-val { color: #FF5722; }
+        .hum-val { color: #2196F3; }
+
+        .aisle-marker {
+            position: absolute;
+            background: rgba(255, 235, 59, 0.9); color: black; padding: 2px 6px;
+            border-radius: 4px; font-size: 12px; font-weight: bold;
+            pointer-events: none; display: none; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="aisle-label" class="aisle-marker">通道: 0.5m</div>
+
+    <!-- 左側資訊 -->
+    <div id="info-panel" class="panel">
+        <h2>能耗評估 V7.1</h2>
+        <div style="font-size:12px; color:#ccc; margin-bottom:10px;">
+            全系統模擬：四季環境、循環扇與即時電力成本估算。
+        </div>
+
+        <div class="section-header">系統圖例</div>
+        <div class="legend-grid">
+            <div class="legend-item"><span class="dot" style="background:#E040FB;"></span>補光燈 (LED)</div>
+            <div class="legend-item"><span class="dot" style="background:#FF9800;"></span>循環扇 (Cir Fan)</div>
+            <div class="legend-item"><span class="dot" style="background:#2196F3;"></span>供水/滴灌</div>
+            <div class="legend-item"><span class="dot" style="background:#4CAF50;"></span>養液供給</div>
+            <div class="legend-item"><span class="dot" style="background:#FFEB3B;"></span>PPFD 光感測</div>
+        </div>
+        
+        <div class="section-header">能耗儀表板 (Power Monitor)</div>
+        <div class="power-box">
+            <div class="power-row">
+                <span>即時負載 (Load):</span>
+                <span class="power-val"><span id="power-load">0.0</span> kW</span>
+            </div>
+            <div class="power-row">
+                <span>預估時薪 (Cost):</span>
+                <span class="power-val">NT$ <span id="power-cost">0.0</span> /hr</span>
+            </div>
+            <div style="font-size:10px; color:#888; margin-top:5px;">* 費率假設: NT$ 4.0 / kWh</div>
+        </div>
+    </div>
+
+    <!-- 底部環控儀表 -->
+    <div id="climate-panel" class="panel">
+        <h2 style="margin:0; font-size:14px; justify-content:center; color:#FF5722;">🌡️ 環境監測</h2>
+        <div class="climate-grid">
+            <div class="climate-box">
+                <div class="climate-label">外部 (External)</div>
+                <div><span id="ext-temp" class="climate-value temp-val">30.0</span> <small>°C</small></div>
+                <div><span id="ext-hum" class="climate-value hum-val">60</span> <small>%</small></div>
+            </div>
+            <div class="climate-box" style="border: 1px solid #4CAF50;">
+                <div class="climate-label">內部 (Internal)</div>
+                <div><span id="int-temp" class="climate-value temp-val">28.5</span> <small>°C</small></div>
+                <div><span id="int-hum" class="climate-value hum-val">65</span> <small>%</small></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右側控制 -->
+    <div id="control-panel" class="panel">
+        <div id="sun-display">☀️ 12:00 PM</div>
+        <input type="range" id="timeSlider" min="6" max="22" step="0.1" value="12">
+
+        <div class="section-header">環境設定 (Environment)</div>
+        <label>季節 (Season)</label>
+        <select id="seasonSelect" onchange="updateClimateCalculation()">
+            <option value="spring">春季 (Spring)</option>
+            <option value="summer" selected>夏季 (Summer)</option>
+            <option value="autumn">秋季 (Autumn)</option>
+            <option value="winter">冬季 (Winter)</option>
+        </select>
+
+        <div class="section-header">光照系統</div>
+        <button id="btnLight" style="width:100%; margin-bottom:10px;" onclick="toggleLight()">💡 LED 補光燈 (OFF)</button>
+
+        <div class="section-header">空間規劃</div>
+        <button id="btnTransform" style="width:100%; margin-bottom:10px; height: 40px;" onclick="toggleTransform()">切換：I 字收合 (工作)</button>
+        
+        <label>A字架排數 <span id="valGroups">3</span></label>
+        <input type="range" id="groupsSlider" min="2" max="5" step="1" value="3">
+        
+        <label>架高 (Height) <span id="valHeight">2.2m</span></label>
+        <input type="range" id="heightSlider" min="1.8" max="3.0" step="0.1" value="2.2">
+
+        <label>展開底寬 <span id="valSpread">1.2m</span></label>
+        <input type="range" id="spreadSlider" min="0.8" max="2.0" step="0.1" value="1.2">
+
+        <div class="section-header">供應系統</div>
+        <div class="btn-group">
+            <button id="btnWater" onclick="toggleWater()">💧 供水</button>
+            <button id="btnFert" onclick="toggleFert()">🌿 供養</button>
+        </div>
+
+        <div class="section-header">溫室環控</div>
+        <div class="btn-group">
+            <button id="btnFan" onclick="toggleFan()">💨 負壓扇</button>
+            <button id="btnPad" onclick="togglePad()">🟦 水牆</button>
+        </div>
+        <button id="btnCir" style="width:100%" onclick="toggleCir()">🔄 內循環扇 (OFF)</button>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+
+    <script>
+        // --- 變數 ---
+        let scene, camera, renderer, controls;
+        let racks = [];
+        let growLights = [];
+        let lightLabels = [];
+        let fans = []; 
+        let cirFans = []; // 循環扇陣列
+        let sunLight;
+        let aisleLine;
+        
+        // 狀態標記
+        let state = {
+            closed: false,
+            water: false,
+            fert: false,
+            fan: false,
+            pad: false,
+            light: false,
+            cir: false // 循環扇
+        };
+
+        // 設備能耗參數 (單位: Watt) - 假設值
+        const POWER_RATING = {
+            light: 200, // 每排燈條
+            fan: 500,   // 每個負壓扇
+            padPump: 750, // 水牆幫浦
+            waterPump: 375, // 供水幫浦 (0.5HP)
+            fertPump: 375, // 供養幫浦
+            cirFan: 80  // 每個循環扇
+        };
+        const ELEC_RATE = 4.0; // 電費 NTD/kWh
+
+        // 參數
+        const PARAMS = {
+            ghWidth: 8.0,
+            ghLength: 12.0,
+            rackHeight: 2.2,
+            rackDepth: 1.5,
+            rowsCount: 6,
+            groupsCount: 3,
+            baseWidthOpen: 1.2,
+            baseWidthClosed: 0.35,
+            layers: 5,
+            angleOpen: 0,
+            angleClosed: 0,
+            season: 'summer',
+            time: 12
+        };
+
+        // 材質
+        let matDripTube, matPad;
+        let matLineWater, matLineFert;
+        let matGrowLightGlow;
+
+        calculateAngles();
+        init();
+        animate();
+        setInterval(updateClimateCalculation, 1000); 
+
+        function calculateAngles() {
+            PARAMS.angleOpen = Math.atan((PARAMS.baseWidthOpen / 2) / PARAMS.rackHeight);
+            PARAMS.angleClosed = Math.atan((PARAMS.baseWidthClosed / 2) / PARAMS.rackHeight);
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x222);
+            scene.fog = new THREE.Fog(0x222, 10, 60);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+            camera.position.set(0, 6, 16);
+
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.target.set(0, 1.5, 0);
+
+            // 材質
+            matDripTube = new THREE.MeshBasicMaterial({ color: 0x333 }); 
+            matPad = new THREE.MeshLambertMaterial({ color: 0x888 }); 
+            matLineWater = new THREE.MeshPhongMaterial({ color: 0x444 });
+            matLineFert = new THREE.MeshPhongMaterial({ color: 0x444 });
+            matGrowLightGlow = new THREE.MeshBasicMaterial({ color: 0xE040FB, transparent: true, opacity: 0 });
+
+            setupLights();
+            createEnvironment(); 
+            createCompass();
+            createPlumbingSystem();
+            createClimateSystem(); 
+            rebuildSystem(); 
+
+            window.addEventListener('resize', onResize);
+            
+            // Listeners
+            document.getElementById('groupsSlider').addEventListener('input', (e) => {
+                PARAMS.groupsCount = parseInt(e.target.value);
+                document.getElementById('valGroups').innerText = PARAMS.groupsCount;
+                rebuildSystem();
+            });
+            document.getElementById('heightSlider').addEventListener('input', (e) => {
+                PARAMS.rackHeight = parseFloat(e.target.value);
+                document.getElementById('valHeight').innerText = PARAMS.rackHeight + 'm';
+                calculateAngles();
+                // 重新計算目標角度以即時反映
+                if(!state.closed) updateTargetAngles(PARAMS.angleOpen);
+                else updateTargetAngles(PARAMS.angleClosed);
+                rebuildSystem();
+            });
+            document.getElementById('spreadSlider').addEventListener('input', (e) => {
+                PARAMS.baseWidthOpen = parseFloat(e.target.value);
+                document.getElementById('valSpread').innerText = PARAMS.baseWidthOpen + 'm';
+                calculateAngles();
+                if(!state.closed) updateTargetAngles(PARAMS.angleOpen);
+                rebuildSystem();
+            });
+            document.getElementById('timeSlider').addEventListener('input', (e) => {
+                PARAMS.time = parseFloat(e.target.value);
+                updateSun(PARAMS.time);
+                updateClimateCalculation();
+                updateLightValues(); 
+            });
+            document.getElementById('seasonSelect').addEventListener('change', (e) => {
+                PARAMS.season = e.target.value;
+                updateClimateCalculation();
+            });
+            
+            updateSun(12);
+            updateClimateCalculation();
+            updatePowerConsumption();
+        }
+
+        // --- 能耗計算 ---
+        function updatePowerConsumption() {
+            let totalWatts = 0;
+
+            // 1. 照明 (依排數計算燈條數)
+            if(state.light) {
+                // 假設每排架子間有一個燈條 + 兩側
+                const lightCount = PARAMS.groupsCount + 1;
+                totalWatts += lightCount * POWER_RATING.light;
+            }
+
+            // 2. 風扇 (固定2個大風扇)
+            if(state.fan) totalWatts += 2 * POWER_RATING.fan;
+
+            // 3. 水牆幫浦
+            if(state.pad && state.fan) totalWatts += POWER_RATING.padPump;
+
+            // 4. 循環扇 (固定3個)
+            if(state.cir) totalWatts += 3 * POWER_RATING.cirFan;
+
+            // 5. 供水/供養幫浦
+            if(state.water) totalWatts += POWER_RATING.waterPump;
+            if(state.fert) totalWatts += POWER_RATING.fertPump;
+
+            const kW = totalWatts / 1000;
+            const costPerHour = kW * ELEC_RATE;
+
+            document.getElementById('power-load').innerText = kW.toFixed(2);
+            document.getElementById('power-cost').innerText = costPerHour.toFixed(1);
+        }
+
+        // --- 功能切換 ---
+        function toggleLight() {
+            state.light = !state.light;
+            updateBtn('btnLight', state.light, 'active-light');
+            document.getElementById('btnLight').innerText = state.light ? "💡 LED 補光燈 (ON)" : "💡 LED 補光燈 (OFF)";
+            
+            if(state.light) {
+                matGrowLightGlow.opacity = 0.8;
+                growLights.forEach(l => l.intensity = 1.0);
+            } else {
+                matGrowLightGlow.opacity = 0;
+                growLights.forEach(l => l.intensity = 0);
+            }
+            updateLightValues();
+            updatePowerConsumption();
+        }
+
+        function toggleWater() { state.water=!state.water; updatePipes(); updateBtn('btnWater',state.water,'active-water'); updatePowerConsumption(); }
+        function toggleFert() { state.fert=!state.fert; updatePipes(); updateBtn('btnFert',state.fert,'active-fert'); updatePowerConsumption(); }
+        function toggleFan() { state.fan=!state.fan; updateClimateCalculation(); updateBtn('btnFan',state.fan,'active-fan'); updatePowerConsumption(); }
+        function togglePad() { 
+            state.pad=!state.pad; matPad.color.setHex(state.pad?0x3F51B5:0x888); 
+            updateClimateCalculation(); updateBtn('btnPad',state.pad,'active-pad'); updatePowerConsumption();
+        }
+        function toggleCir() { 
+            state.cir=!state.cir; 
+            updateBtn('btnCir',state.cir,'active-cir'); 
+            document.getElementById('btnCir').innerText = state.cir ? "🔄 內循環扇 (ON)" : "🔄 內循環扇 (OFF)";
+            updatePowerConsumption();
+        }
+
+        // --- 核心構建 ---
+        function rebuildSystem() {
+            racks.forEach(r => scene.remove(r.root));
+            racks = [];
+            lightLabels = [];
+            scene.children.filter(c => c.name==='sysObj').forEach(o => scene.remove(o));
+            if(aisleLine) scene.remove(aisleLine);
+            
+            createRacks();
+            createDistributionPipes();
+            createGrowLights(); 
+            
+            if(state.light) {
+                growLights.forEach(l => l.intensity = 1.0);
+                matGrowLightGlow.opacity = 0.8;
+            } else {
+                matGrowLightGlow.opacity = 0;
+            }
+            
+            updateLightValues();
+            updatePowerConsumption();
+        }
+
+        function createRacks() {
+            const spacing = PARAMS.ghWidth / PARAMS.groupsCount;
+            const startX = -(PARAMS.ghWidth/2) + (spacing/2);
+            
+            const matFrame = new THREE.MeshStandardMaterial({color:0xccc, metalness:0.5, roughness:0.5});
+            const matTrough = new THREE.MeshLambertMaterial({color:0xffffff});
+            const matPlant = new THREE.MeshLambertMaterial({color:0x4CAF50});
+
+            // 通道測距線
+            if(PARAMS.groupsCount >= 2) {
+                const x1 = startX; const x2 = startX + spacing;
+                const points = [new THREE.Vector3(x1, 0.1, 2), new THREE.Vector3(x2, 0.1, 2)];
+                const geo = new THREE.BufferGeometry().setFromPoints(points);
+                aisleLine = new THREE.Line(geo, new THREE.LineBasicMaterial({color:0xFFEB3B, linewidth:2}));
+                aisleLine.name = 'sysObj';
+                scene.add(aisleLine);
+            }
+
+            const monitorGroupIdx = Math.floor(PARAMS.groupsCount / 2);
+
+            for(let g=0; g<PARAMS.groupsCount; g++) {
+                const gx = startX + (g*spacing);
+                
+                const rail = new THREE.Mesh(new THREE.PlaneGeometry(PARAMS.baseWidthOpen, PARAMS.ghLength), 
+                    new THREE.MeshBasicMaterial({color:0x333}));
+                rail.rotation.x = -Math.PI/2;
+                rail.position.set(gx, 0.02, 0);
+                rail.name = 'sysObj';
+                scene.add(rail);
+
+                for(let r=0; r<PARAMS.rowsCount; r++) {
+                    const gz = -(PARAMS.ghLength/2) + 2.5 + (r*1.8); 
+                    if(gz > PARAMS.ghLength/2 - 1) continue;
+
+                    const root = new THREE.Group();
+                    root.position.set(gx, PARAMS.rackHeight, gz);
+
+                    const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8), matFrame);
+                    hinge.rotation.x = Math.PI/2;
+                    root.add(hinge);
+
+                    const legLen = Math.sqrt(Math.pow(PARAMS.rackHeight,2) + Math.pow(PARAMS.baseWidthOpen/2,2));
+
+                    const createLeg = (isRight) => {
+                        const leg = new THREE.Group();
+                        const beam = new THREE.Mesh(new THREE.BoxGeometry(0.05, legLen, 0.05), matFrame);
+                        beam.position.y = -legLen/2;
+                        leg.add(beam);
+
+                        const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, legLen), matDripTube);
+                        tube.position.set(isRight?0.04:-0.04, -legLen/2, 0);
+                        leg.add(tube);
+
+                        const layerH = legLen / (PARAMS.layers+0.5);
+                        for(let l=1; l<=PARAMS.layers; l++) {
+                            const y = -l*layerH + 0.2;
+                            const trough = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 1.2), matTrough);
+                            trough.position.set(isRight?0.1:-0.1, y, 0);
+                            trough.castShadow = true; 
+                            leg.add(trough);
+
+                            for(let p=-2; p<=2; p++) {
+                                const plant = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12), matPlant);
+                                plant.position.set(0, 0.15, p*0.25);
+                                trough.add(plant);
+                            }
+
+                            if(g === monitorGroupIdx && r === 0 && !isRight) {
+                                const labelObj = createTextSprite("0");
+                                labelObj.sprite.position.set(-0.5, y + 0.1, 0);
+                                labelObj.layer = l; 
+                                leg.add(labelObj.sprite);
+                                lightLabels.push(labelObj);
+                            }
+                        }
+                        return leg;
+                    };
+
+                    const lLeg = createLeg(false);
+                    const rLeg = createLeg(true);
+                    const initAng = state.closed ? PARAMS.angleClosed : PARAMS.angleOpen;
+                    lLeg.rotation.z = initAng; rLeg.rotation.z = -initAng;
+                    root.add(lLeg); root.add(rLeg); scene.add(root);
+                    racks.push({root, lLeg, rLeg, curAng: initAng, targetAngle: initAng});
+                }
+            }
+        }
+
+        // --- 系統建立 (包含新增的循環扇) ---
+        function createClimateSystem() {
+            // 風扇
+            const fanGeo = new THREE.BoxGeometry(1,1,0.2); const bladeGeo = new THREE.PlaneGeometry(0.9,0.1);
+            for(let x=-2; x<=2; x+=4) {
+                const fb = new THREE.Mesh(fanGeo, new THREE.MeshLambertMaterial({color:0x555}));
+                fb.position.set(x, 1.5, -PARAMS.ghLength/2); scene.add(fb);
+                const bg = new THREE.Group();
+                const b1 = new THREE.Mesh(bladeGeo, new THREE.MeshBasicMaterial({color:0xaaa, side:THREE.DoubleSide}));
+                const b2 = b1.clone(); b2.rotation.z=Math.PI/2;
+                bg.add(b1); bg.add(b2); bg.position.z=0.11; fb.add(bg); fans.push(bg);
+            }
+            // 水牆
+            const pad = new THREE.Mesh(new THREE.BoxGeometry(PARAMS.ghWidth-1,2,0.2), matPad);
+            pad.position.set(0,1.5,PARAMS.ghLength/2); scene.add(pad);
+
+            // 循環扇 (橘色) - 重新加入
+            cirFans = [];
+            const cirGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.15, 16);
+            const cirMat = new THREE.MeshLambertMaterial({color:0xFF9800}); // Orange
+            const bladeSmall = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.05), new THREE.MeshBasicMaterial({color:0xeee, side:THREE.DoubleSide}));
+            
+            // 在中軸線上放3個
+            for(let z=-3; z<=3; z+=3) {
+                const cf = new THREE.Mesh(cirGeo, cirMat);
+                cf.rotation.x = Math.PI/2;
+                cf.position.set(0, 4.0, z); // 掛在頂部
+                scene.add(cf);
+                
+                const cb = bladeSmall.clone();
+                cb.rotation.x = Math.PI/2; // 修正扇葉方向
+                cb.position.y = 0.1; // 浮在圓柱面上
+                cf.add(cb);
+                cirFans.push(cb);
+                
+                // 吊桿
+                const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,1), new THREE.MeshBasicMaterial({color:0x333}));
+                rod.rotation.x = -Math.PI/2;
+                rod.position.z = -0.5;
+                cf.add(rod);
+            }
+        }
+
+        // --- 溫濕度運算 (加入季節連動) ---
+        function updateClimateCalculation() {
+            let baseTemp = 25; let baseHum = 60;
+            
+            // 讀取季節 PARAMS.season
+            if(PARAMS.season === 'summer') { baseTemp=30; baseHum=70; }
+            if(PARAMS.season === 'winter') { baseTemp=15; baseHum=50; }
+            if(PARAMS.season === 'spring') { baseTemp=22; baseHum=65; }
+            if(PARAMS.season === 'autumn') { baseTemp=24; baseHum=60; }
+
+            const h = PARAMS.time;
+            const tf = Math.sin((h-8)*Math.PI/12);
+            let extT = baseTemp + (tf*5); let extH = baseHum - (tf*10);
+            let intT = extT + 2; let intH = extH;
+            
+            if(state.fan) { intT-=1.5; intH-=5; }
+            if(state.pad && state.fan) { intT-=5; intH+=20; }
+            if(state.water) intH+=2;
+            if(intH>99) intH=99;
+            
+            document.getElementById('ext-temp').innerText = extT.toFixed(1);
+            document.getElementById('ext-hum').innerText = Math.round(extH);
+            document.getElementById('int-temp').innerText = intT.toFixed(1);
+            document.getElementById('int-hum').innerText = Math.round(intH);
+        }
+
+        // --- 其余輔助函數 ---
+        function createGrowLights() {
+            growLights = [];
+            const spacing = PARAMS.ghWidth / PARAMS.groupsCount;
+            const startX = -(PARAMS.ghWidth/2);
+            for(let i=0; i<=PARAMS.groupsCount; i++) {
+                const lx = startX + (i * spacing);
+                const lh = PARAMS.rackHeight + 0.8;
+                const lightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, PARAMS.ghLength - 1), new THREE.MeshLambertMaterial({color:0x555}));
+                lightMesh.position.set(lx, lh, 0); lightMesh.name = 'sysObj'; scene.add(lightMesh);
+                const glowMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.15, PARAMS.ghLength - 1), matGrowLightGlow);
+                glowMesh.rotation.x = Math.PI/2; glowMesh.position.y = -0.03; lightMesh.add(glowMesh);
+                for(let k=-1; k<=1; k++) {
+                    const pl = new THREE.PointLight(0xE040FB, 0, 8); pl.position.set(lx, lh-0.2, k*4); scene.add(pl); growLights.push(pl);
+                }
+            }
+        }
+
+        function createTextSprite(text) {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 64;
+            const ctx = canvas.getContext('2d'); ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0, 128,64);
+            ctx.fillStyle = '#FFEB3B'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 64, 32);
+            const tex = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+            sprite.scale.set(0.5, 0.25, 1);
+            return { sprite, ctx, canvas, tex };
+        }
+
+        function updateLightLabel(labelObj, val) {
+            const { ctx, tex } = labelObj; ctx.clearRect(0,0, 128,64);
+            let color = val<200?'#FF5722':(val<400?'#FFC107':'#4CAF50');
+            ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0,0, 128,64);
+            ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.strokeRect(2,2, 124,60);
+            ctx.fillStyle = color; ctx.font = 'bold 28px Monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(val, 64, 32);
+            tex.needsUpdate = true;
+        }
+
+        function updateLightValues() {
+            const hour = PARAMS.time;
+            let sunIntensity = (hour>6 && hour<18) ? Math.sin((hour-6)*Math.PI/12) : 0;
+            const maxSunPPFD = 1200;
+            lightLabels.forEach(obj => {
+                const layerIdx = obj.layer;
+                let exposure = state.closed ? (1.0 - ((layerIdx-1)*0.2)) : (1.0 - ((layerIdx-1)*0.1));
+                if(exposure < 0.1) exposure = 0.1;
+                let currentSun = sunIntensity * maxSunPPFD * exposure;
+                let artificial = state.light ? 400 * (1.0 - (layerIdx-1)*0.05) : 0;
+                updateLightLabel(obj, Math.round(currentSun + artificial));
+            });
+        }
+
+        function createDistributionPipes() {
+            const spacing = PARAMS.ghWidth / PARAMS.groupsCount;
+            const startX = -(PARAMS.ghWidth/2) + (spacing/2);
+            const headerW = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, PARAMS.ghWidth), matLineWater);
+            headerW.rotation.z = Math.PI/2; headerW.position.set(0, 5, -PARAMS.ghLength/2 + 1.5); headerW.name = 'sysObj'; scene.add(headerW);
+            const headerF = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, PARAMS.ghWidth), matLineFert);
+            headerF.rotation.z = Math.PI/2; headerF.position.set(0, 4.7, -PARAMS.ghLength/2 + 2.0); headerF.name = 'sysObj'; scene.add(headerF);
+            for(let g=0; g<PARAMS.groupsCount; g++) {
+                const gx = startX + (g*spacing);
+                const dropW = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5), matLineWater); dropW.position.set(gx - 0.2, 4.75, -PARAMS.ghLength/2 + 1.5); dropW.name = 'sysObj'; scene.add(dropW);
+                const flexW = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.5), matLineWater); flexW.position.set(gx - 0.2, 3.5, -PARAMS.ghLength/2 + 1.5); flexW.name = 'sysObj'; scene.add(flexW);
+                const dropF = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.5), matLineFert); dropF.position.set(gx + 0.2, 4.45, -PARAMS.ghLength/2 + 2.0); dropF.name = 'sysObj'; scene.add(dropF);
+                const flexF = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.3), matLineFert); flexF.position.set(gx + 0.2, 3.4, -PARAMS.ghLength/2 + 2.0); flexF.name = 'sysObj'; scene.add(flexF);
+            }
+        }
+
+        function createPlumbingSystem() {
+            const tGroup = new THREE.Group();
+            const wT = new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,3.5,32), new THREE.MeshPhongMaterial({color:0x1976D2,opacity:0.9,transparent:true})); wT.position.set(-3, 1.75, -PARAMS.ghLength/2 - 4); tGroup.add(wT);
+            const nT = new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,2.5,32), new THREE.MeshPhongMaterial({color:0x388E3C})); nT.position.set(2, 1.25, -PARAMS.ghLength/2 - 4); tGroup.add(nT);
+            const rW = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,5), matLineWater); rW.position.set(-3,2.5,-PARAMS.ghLength/2-2); tGroup.add(rW);
+            const cW = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,4), matLineWater); cW.rotation.x=Math.PI/2; cW.position.set(-3,5,-PARAMS.ghLength/2-0.5); tGroup.add(cW);
+            const rF = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,5), matLineFert); rF.position.set(2,2.5,-PARAMS.ghLength/2-2); tGroup.add(rF);
+            const cF = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,4), matLineFert); cF.rotation.x=Math.PI/2; cF.position.set(2,5,-PARAMS.ghLength/2-0.5); tGroup.add(cF);
+            scene.add(tGroup);
+        }
+
+        function createCompass() {
+            const g = new THREE.Group(); g.position.set(0,0.1,10);
+            const s = new THREE.Shape(); s.moveTo(0,1.5); s.lineTo(0.5,0); s.lineTo(0.2,0); s.lineTo(0.2,-1); s.lineTo(-0.2,-1); s.lineTo(-0.2,0); s.lineTo(-0.5,0); s.lineTo(0,1.5);
+            const a = new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth:0.1,bevelEnabled:false}), new THREE.MeshBasicMaterial({color:0xFF0000}));
+            a.rotation.x=Math.PI/2; a.rotation.z=Math.PI; g.add(a);
+            const n = new THREE.Group();
+            const bG = new THREE.BoxGeometry(0.1,0.05,0.8); const bM=new THREE.MeshBasicMaterial({color:0xFFFFFF});
+            const l=new THREE.Mesh(bG,bM); l.position.x=-0.3; const r=new THREE.Mesh(bG,bM); r.position.x=0.3; const c=new THREE.Mesh(bG,bM); c.rotation.y=-0.6; c.scale.set(1,1,1.1);
+            n.add(l); n.add(r); n.add(c); n.position.z=-2; g.add(n); scene.add(g);
+        }
+
+        function createEnvironment() {
+            const fl = new THREE.Mesh(new THREE.PlaneGeometry(50,50), new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.8}));
+            fl.rotation.x = -Math.PI/2; fl.receiveShadow=true; scene.add(fl);
+            scene.add(new THREE.GridHelper(50,50, 0x444, 0x222));
+            const box = new THREE.BoxGeometry(PARAMS.ghWidth, 5, PARAMS.ghLength);
+            const edges = new THREE.EdgesGeometry(box);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:0xFFFF00, opacity:0.2, transparent:true}));
+            line.position.y = 2.5; scene.add(line);
+        }
+
+        function setupLights() {
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.set(2048,2048);
+            sunLight.shadow.camera.left=-15; sunLight.shadow.camera.right=15;
+            sunLight.shadow.camera.top=15; sunLight.shadow.camera.bottom=-15;
+            scene.add(sunLight);
+        }
+
+        function updateSun(t) {
+            const ang = ((t-6)/12) * Math.PI;
+            const r = 25;
+            sunLight.position.set(-Math.cos(ang)*r, Math.sin(ang)*r, 5);
+            const h = Math.floor(t); const m = Math.floor((t-h)*60);
+            const ap = h>=12 ? 'PM':'AM'; const dh = h>12?h-12:h;
+            document.getElementById('sun-display').innerText = `☀️ ${dh}:${m<10?'0'+m:m} ${ap}`;
+        }
+
+        function toggleTransform() {
+            state.closed = !state.closed;
+            const btn = document.getElementById('btnTransform');
+            if(state.closed) {
+                btn.innerText = "切換：展開受光 (A字型)"; btn.classList.add('active-transform');
+                updateTargetAngles(PARAMS.angleClosed);
+            } else {
+                btn.innerText = "切換：I 字收合 (工作模式)"; btn.classList.remove('active-transform');
+                updateTargetAngles(PARAMS.angleOpen);
+            }
+            updateLightValues();
+        }
+
+        function updateTargetAngles(angle) {
+            racks.forEach(r => r.targetAngle = angle);
+        }
+
+        function updatePipes() {
+            matLineWater.color.setHex(state.water?0x2196F3:0x444);
+            matLineFert.color.setHex(state.fert?0x4CAF50:0x444);
+            if(state.water&&state.fert) matDripTube.color.setHex(0x009688);
+            else if(state.water) matDripTube.color.setHex(0x2196F3);
+            else if(state.fert) matDripTube.color.setHex(0x4CAF50);
+            else matDripTube.color.setHex(0x333);
+        }
+        function updateBtn(id,a,c) { const b=document.getElementById(id); if(a) b.classList.add(c); else b.classList.remove(c); }
+
+        function onResize() {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            let moving = false;
+            racks.forEach(r => {
+                if(Math.abs(r.curAng - r.targetAngle) > 0.001) {
+                    r.curAng += (r.targetAngle - r.curAng)*0.1;
+                    r.lLeg.rotation.z = r.curAng; r.rLeg.rotation.z = -r.curAng;
+                    moving = true;
+                }
+            });
+            if(moving || aisleLine) updateAisleLabel();
+            if(state.fan) fans.forEach(f => f.rotation.z -= 0.5);
+            if(state.cir) cirFans.forEach(c => c.rotation.z -= 0.5); 
+            renderer.render(scene, camera);
+        }
+
+        function updateAisleLabel() {
+            if(PARAMS.groupsCount < 2 || racks.length === 0) return;
+            const currentLegAngle = racks[0].curAng;
+            const legLen = Math.sqrt(Math.pow(PARAMS.rackHeight,2) + Math.pow(PARAMS.baseWidthOpen/2,2));
+            const currentBaseWidth = (legLen * Math.sin(currentLegAngle)) * 2;
+            const spacing = PARAMS.ghWidth / PARAMS.groupsCount;
+            const aisleWidth = spacing - currentBaseWidth;
+            const startX = -(PARAMS.ghWidth/2) + (spacing/2);
+            const labelX = startX + spacing/2;
+            const lbl = document.getElementById('aisle-label');
+            const vec = new THREE.Vector3(labelX, 0.5, 2);
+            vec.project(camera);
+            const x = (vec.x * .5 + .5) * window.innerWidth;
+            const y = (-(vec.y * .5) + .5) * window.innerHeight;
+            lbl.style.background = aisleWidth < 0.3 ? 'rgba(255, 87, 34, 0.9)' : 'rgba(76, 175, 80, 0.9)';
+            lbl.style.display = 'block'; lbl.style.left = `${x}px`; lbl.style.top = `${y}px`;
+            lbl.innerText = `通道: ${aisleWidth.toFixed(2)}m`;
+        }
+
+    </script>
+</body>
+</html>

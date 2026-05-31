@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作流程圖產生器 A04</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg: #f0f2f7;
+            --surface: #ffffff;
+            --surface2: #f7f8fc;
+            --border: #e4e7f0;
+            --border-focus: #5b6af0;
+            --text: #1a1d2e;
+            --text-muted: #8890b0;
+            --accent: #5b6af0;
+            --accent-dark: #4451d4;
+            --accent-light: #eef0fe;
+            --accent-glow: rgba(91,106,240,0.15);
+            --green: #10b981;
+            --green-light: #ecfdf5;
+            --orange: #f59e0b;
+            --orange-light: #fffbeb;
+            --red: #ef4444;
+            --shadow-sm: 0 1px 3px rgba(26,29,46,0.06), 0 1px 2px rgba(26,29,46,0.04);
+            --shadow-md: 0 4px 12px rgba(26,29,46,0.08), 0 2px 4px rgba(26,29,46,0.04);
+            --shadow-lg: 0 12px 32px rgba(26,29,46,0.1), 0 4px 8px rgba(26,29,46,0.06);
+            --radius: 12px;
+            --radius-sm: 7px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #c2c8de; }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 30;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text);
+        }
+
+        .header-logo .icon-wrap {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 500;
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 99px;
+            letter-spacing: 0.02em;
+        }
+
+        .header-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        @media (max-width: 1100px) {
+            main { grid-template-columns: 1fr; overflow-y: auto; }
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: -0.01em;
+        }
+
+        .panel-title i { color: var(--accent); font-size: 12px; }
+
+        .toolbar {
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+            font-family: 'DM Sans', sans-serif;
+            white-space: nowrap;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+        .btn-ghost:hover { background: var(--surface2); border-color: #c2c8de; color: var(--text); }
+
+        .btn-teal {
+            background: var(--green-light);
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+        .btn-teal:hover { background: #d1fae5; border-color: #6ee7b7; }
+
+        .btn-blue {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+        .btn-blue:hover { background: #dbeafe; border-color: #93c5fd; }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .btn-accent:hover { background: var(--accent-dark); border-color: var(--accent-dark); box-shadow: 0 4px 12px var(--accent-glow); }
+        .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .btn-danger-ghost {
+            background: transparent;
+            border-color: transparent;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+        .btn-danger-ghost:hover { color: var(--red); background: #fef2f2; }
+
+        .btn-generate {
+            width: 100%;
+            padding: 11px 20px;
+            border-radius: var(--radius-sm);
+            background: var(--accent);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+            box-shadow: 0 2px 10px var(--accent-glow);
+            letter-spacing: -0.01em;
+        }
+        .btn-generate:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+        .btn-generate:active { transform: translateY(0); }
+
+        .select-styled {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 5px 8px;
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text);
+            background: var(--surface);
+            cursor: pointer;
+            max-width: 150px;
+            outline: none;
+        }
+        .select-styled:focus { border-color: var(--border-focus); }
+
+        .table-scroll {
+            flex: 1;
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 680px;
+            font-size: 12px;
+        }
+
+        thead th {
+            background: var(--surface2);
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+
+        tbody tr:hover { background: var(--surface2); }
+        tbody tr:last-child { border-bottom: none; }
+
+        tbody tr.dragging-row {
+            opacity: 0.4;
+            background: var(--accent-light);
+        }
+
+        tbody tr.drag-over {
+            border-top: 2px solid var(--accent);
+            background: var(--accent-light);
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: #c8cce0;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+            font-size: 12px;
+        }
+        .drag-handle:hover { color: var(--accent); background: var(--accent-light); }
+        .drag-handle:active { cursor: grabbing; }
+
+        .grid-input {
+            width: 100%;
+            border: 1px solid transparent;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'DM Sans', sans-serif;
+            background: transparent;
+            color: var(--text);
+            transition: all 0.15s;
+            outline: none;
+        }
+        .grid-input::placeholder { color: #b8bcce; }
+        .grid-input:hover { border-color: var(--border); background: var(--surface); }
+        .grid-input:focus { border-color: var(--border-focus); background: white; box-shadow: 0 0 0 2px var(--accent-glow); }
+
+        .io-cell { display: flex; flex-direction: column; gap: 3px; }
+        .io-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 6px;
+            border-radius: 5px;
+            border: 1px solid transparent;
+        }
+        .io-row.in-row { background: var(--green-light); border-color: #d1fae5; }
+        .io-row.out-row { background: var(--orange-light); border-color: #fde68a; }
+        .io-row i { font-size: 9px; flex-shrink: 0; }
+        .io-row.in-row i { color: var(--green); }
+        .io-row.out-row i { color: var(--orange); }
+        .io-input {
+            border: none;
+            background: transparent;
+            font-size: 11px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            width: 100%;
+            color: var(--text);
+        }
+        .io-input::placeholder { color: #b8bcce; }
+
+        .row-actions { display: flex; gap: 4px; justify-content: center; align-items: center; }
+        .row-btn {
+            width: 24px; height: 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 10px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .row-btn-insert { background: var(--accent-light); color: var(--accent); }
+        .row-btn-insert:hover { background: var(--accent); color: white; }
+        .row-btn-del { background: #fef2f2; color: #fca5a5; }
+        .row-btn-del:hover { background: #fee2e2; color: var(--red); }
+
+        .panel-footer {
+            padding: 12px 18px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+
+        .footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .hint-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .hint-text code {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 1px 4px;
+            border-radius: 3px;
+            color: var(--accent);
+        }
+
+        #chart-wrapper {
+            flex: 1;
+            position: relative;
+            background: var(--surface2);
+            overflow: hidden;
+            cursor: grab;
+        }
+        #chart-wrapper:active { cursor: grabbing; }
+
+        #flowchart-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            transform-origin: center;
+            user-select: none;
+        }
+
+        /* 確保 Mermaid 產出的 SVG 能夠完整延展，不被強制縮小 */
+        .mermaid svg {
+            max-width: none !important;
+            height: auto !important;
+        }
+
+        #zoom-indicator {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26,29,46,0.7);
+            color: white;
+            font-size: 11px;
+            font-family: 'DM Mono', monospace;
+            padding: 4px 10px;
+            border-radius: 99px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        #zoom-indicator.show { opacity: 1; }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 14px;
+            right: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .zoom-btn {
+            width: 28px; height: 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.15s;
+        }
+        .zoom-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        #empty-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .empty-icon {
+            width: 60px; height: 60px;
+            background: var(--accent-light);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            color: var(--accent);
+            opacity: 0.6;
+        }
+
+        .empty-text { font-size: 13px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+
+        #chart-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, #d0d4e8 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+            background: var(--text);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+            white-space: nowrap;
+        }
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(26,29,46,0.4);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            width: 420px;
+            max-width: 95vw;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal h3 i { color: var(--accent); }
+        .modal p { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+
+        .modal-input {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 9px 12px;
+            font-size: 13px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .modal-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+        .modal-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+        .parent-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #dde2fd;
+            margin-bottom: 16px;
+        }
+
+        .pan-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 99px;
+        }
+
+        .v-divider { width: 1px; background: var(--border); height: 18px; flex-shrink: 0; }
+
+        @keyframes rowHighlight {
+            from { background: var(--accent-light); }
+            to { background: transparent; }
+        }
+        .row-just-dropped { animation: rowHighlight 0.8s ease forwards; }
+        .col-label-accent { color: var(--accent); }
+        .row-num {
+            font-size: 10px;
+            font-family: 'DM Mono', monospace;
+            color: #ccd0e0;
+            text-align: center;
+            width: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 定義供所有欄位共用的下拉選單 Datalist -->
+<!-- 為了避免打字時選單閃退，已優化事件監聽邏輯 -->
+<datalist id="group-datalist"></datalist>
+<datalist id="node-datalist"></datalist>
+<input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+
+<header>
+    <div class="header-logo">
+        <div class="icon-wrap"><i class="fa-solid fa-sitemap"></i></div>
+        工作流程圖產生器
+        <span class="badge">A04</span>
+    </div>
+    <div class="header-hint">
+        <i class="fa-solid fa-table-list"></i>
+        表格拖曳重排 · 滾輪縮放 · Excel 雙向匯入匯出
+    </div>
+</header>
+
+<main>
+    <!-- LEFT: Table Panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <i class="fa-solid fa-pen-to-square"></i>
+                流程規格表
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <select id="templateSelect" class="select-styled">
+                    <option value="">— 選擇模板 —</option>
+                    <option value="project">專案開發</option>
+                    <option value="daily">審核流程</option>
+                    <optgroup label="自訂模板" id="customTemplateGroup"></optgroup>
+                </select>
+                <button id="deleteTemplateBtn" class="btn btn-ghost" style="display:none;color:#ef4444;border-color:#fecaca;" title="刪除此模板">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <div class="v-divider"></div>
+                <button id="openSaveModalBtn" class="btn btn-ghost" title="儲存為模板">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存
+                </button>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button id="importDataBtn" class="btn btn-teal">
+                <i class="fa-solid fa-file-import"></i> 匯入 Excel
+            </button>
+            <button id="exportDataBtn" class="btn btn-blue">
+                <i class="fa-solid fa-file-export"></i> 匯出 Excel
+            </button>
+        </div>
+
+        <div class="table-scroll" id="tableScroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:28px"></th>
+                        <th style="width:22px" class="row-num">#</th>
+                        <th style="width:100px">群組</th>
+                        <th style="width:130px">目前步驟 <span style="color:#ef4444">*</span></th>
+                        <th style="width:90px" class="col-label-accent">連線標籤</th>
+                        <th style="width:130px">下一步驟</th>
+                        <th>輸入 / 產出</th>
+                        <th style="width:60px;text-align:center">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="input-tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="panel-footer">
+            <button id="addRowBtn" class="btn btn-ghost" style="width:100%;justify-content:center;padding:8px;border-style:dashed;">
+                <i class="fa-solid fa-plus"></i> 在末端新增一列
+            </button>
+            <button id="generateBtn" class="btn-generate">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 產生 / 更新圖表
+            </button>
+            <div class="footer-row">
+                <span class="hint-text">
+                    <i class="fa-solid fa-circle-info"></i>
+                    步驟尾加 <code>?</code> 菱形；頭加 <code>*</code> 六角形；<i class="fa-solid fa-grip-dots-vertical" style="margin-left:4px"></i> 可拖曳列重排
+                </span>
+                <button id="clearBtn" class="btn btn-danger-ghost">
+                    <i class="fa-solid fa-trash"></i> 清空
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Chart Panel -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <i class="fa-solid fa-diagram-project"></i>
+                視覺化流程圖
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="pan-badge" style="display: none;">
+                    <i class="fa-solid fa-arrows-up-down-left-right"></i> 拖曳平移 · 滾輪縮放
+                </div>
+                <!-- 新增：佈局方向選擇器 -->
+                <select id="layoutDirectionSelect" class="select-styled" style="width: auto; padding: 4px 8px;" title="選擇流程圖排列方向">
+                    <option value="TD">直式排列</option>
+                    <option value="LR">橫式排列</option>
+                </select>
+                <button id="exportPngBtn" class="btn btn-blue" disabled>
+                    <i class="fa-solid fa-camera"></i> 下載圖片
+                </button>
+            </div>
+        </div>
+
+        <div id="chart-wrapper">
+            <div id="empty-state">
+                <div class="empty-icon"><i class="fa-solid fa-diagram-project"></i></div>
+                <div class="empty-text">填寫左側表格後<br>點擊「產生 / 更新圖表」</div>
+            </div>
+            <div id="flowchart-container">
+                <div class="mermaid" id="mermaid-graph"></div>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoomInBtn" title="放大"><i class="fa-solid fa-plus"></i></button>
+                <button class="zoom-btn" id="zoomResetBtn" title="重設"><i class="fa-solid fa-expand"></i></button>
+                <button class="zoom-btn" id="zoomOutBtn" title="縮小"><i class="fa-solid fa-minus"></i></button>
+            </div>
+            <div id="zoom-indicator">100%</div>
+        </div>
+    </div>
+</main>
+
+<div id="toast">
+    <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+    <span id="toast-message">操作成功</span>
+</div>
+
+<!-- Save Template Modal -->
+<div id="saveTemplateModal" class="modal-overlay">
+    <div class="modal">
+        <h3><i class="fa-solid fa-floppy-disk"></i> 儲存為模板</h3>
+        <p>儲存於瀏覽器，下次可快速載入</p>
+        <label class="modal-label">模板名稱</label>
+        <input type="text" id="templateNameInput" class="modal-input" placeholder="例如：請款流程 V2">
+        <div class="modal-footer">
+            <button onclick="closeSaveModal()" class="btn btn-ghost">取消</button>
+            <button id="confirmSaveTemplateBtn" class="btn btn-accent">確認儲存</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Node Modal -->
+<div id="addNodeModal" class="modal-overlay">
+    <div class="modal">
+        <h3><i class="fa-solid fa-code-branch"></i> 從圖表延伸新步驟</h3>
+        <div class="parent-badge">
+            <i class="fa-solid fa-circle-dot" style="font-size:10px"></i>
+            <span id="modalParentNodeName"></span>
+        </div>
+        <div class="modal-grid">
+            <div>
+                <label class="modal-label" style="color:var(--accent)">連線標籤</label>
+                <input type="text" id="newEdgeLabel" class="modal-input" placeholder="例：同意 (選填)" style="font-size:12px;padding:7px 10px;">
+            </div>
+            <div>
+                <label class="modal-label">下一步驟名稱 <span style="color:var(--red)">*</span></label>
+                <input type="text" id="newNodeInput" class="modal-input" placeholder="輸入名稱 (尾加?→決策)" style="font-size:12px;padding:7px 10px;">
+            </div>
+        </div>
+        <div class="modal-grid" style="padding-top:12px;border-top:1px solid var(--border);margin-top:0">
+            <div>
+                <label class="modal-label" style="color:var(--green)">附加輸入</label>
+                <input type="text" id="newInVal" class="modal-input" placeholder="例：表單 (選填)" style="font-size:12px;padding:7px 10px;">
+            </div>
+            <div>
+                <label class="modal-label" style="color:var(--orange)">附加產出</label>
+                <input type="text" id="newOutVal" class="modal-input" placeholder="例：報告 (選填)" style="font-size:12px;padding:7px 10px;">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="cancelNodeBtn" class="btn btn-ghost">取消</button>
+            <button id="confirmNodeBtn" class="btn btn-accent">新增至流程</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// 1. Init
+// ─────────────────────────────────────────
+mermaid.initialize({
+    startOnLoad: false,
+    theme: 'default',
+    securityLevel: 'loose',
+    useMaxWidth: false, /* 關閉最大寬度限制，維持原始大小 */
+    flowchart: { htmlLabels: true }
+});
+
+const inputTbody = document.getElementById('input-tbody');
+const mermaidGraph = document.getElementById('mermaid-graph');
+const emptyState = document.getElementById('empty-state');
+const chartWrapper = document.getElementById('chart-wrapper');
+const flowchartContainer = document.getElementById('flowchart-container');
+const groupDatalist = document.getElementById('group-datalist');
+const nodeDatalist = document.getElementById('node-datalist');
+const exportPngBtn = document.getElementById('exportPngBtn');
+const excelFileInput = document.getElementById('excelFileInput');
+const zoomIndicator = document.getElementById('zoom-indicator');
+const layoutDirectionSelect = document.getElementById('layoutDirectionSelect');
+
+let currentNodesList = [];
+let globalNodeInfos = {};
+let hasGeneratedChart = false;
+let selectedNodeForBranch = null;
+let isDraggingChart = false;
+let currentTemplateName = '';
+let chartDirection = 'TD'; // 預設直式排列
+
+let translateX = 0, translateY = 0;
+let lastTX = 0, lastTY = 0;
+let scale = 1;
+let isPanning = false, panStartX, panStartY;
+let zoomIndicatorTimeout;
+let dragSrcRow = null;
+
+// ─────────────────────────────────────────
+// 2. Templates Data
+// ─────────────────────────────────────────
+const templates = {
+    project: [
+        { group: '規劃階段', from: '專案啟動', label: '', to: '需求訪談', inVal: '專案目標', outVal: '' },
+        { group: '規劃階段', from: '需求訪談', label: '', to: '規格書確認?', inVal: '', outVal: '需求規格書' },
+        { group: '規劃階段', from: '規格書確認?', label: '否', to: '需求訪談', inVal: '', outVal: '' },
+        { group: '規劃階段', from: '規格書確認?', label: '是', to: '*進入開發', inVal: '', outVal: '' },
+        { group: '開發與測試', from: '*進入開發', label: '', to: '系統實作', inVal: '', outVal: '' },
+        { group: '開發與測試', from: '系統實作', label: '', to: '內部測試?', inVal: '設計圖', outVal: '初版程式' },
+        { group: '開發與測試', from: '內部測試?', label: '發現Bug', to: '系統實作', inVal: '', outVal: '' },
+        { group: '開發與測試', from: '內部測試?', label: '通過', to: '*準備上線', inVal: '', outVal: '測試報告' },
+        { group: '上線階段', from: '*準備上線', label: '', to: '部署至正式環境', inVal: '', outVal: '' },
+        { group: '上線階段', from: '部署至正式環境', label: '', to: '結案', inVal: '', outVal: '結案報告' }
+    ],
+    daily: [
+        { group: '費用申請', from: '員工填寫表單', label: '', to: '單位主管簽核?', inVal: '收據憑證', outVal: '電子表單' },
+        { group: '費用申請', from: '單位主管簽核?', label: '退回', to: '員工填寫表單', inVal: '', outVal: '' },
+        { group: '費用申請', from: '單位主管簽核?', label: '核准', to: '財務部審核?', inVal: '', outVal: '' },
+        { group: '財務撥款', from: '財務部審核?', label: '資料不全', to: '員工填寫表單', inVal: '', outVal: '' },
+        { group: '財務撥款', from: '財務部審核?', label: '確認無誤', to: '*進行撥款', inVal: '', outVal: '' },
+        { group: '財務撥款', from: '*進行撥款', label: '', to: '歸檔', inVal: '', outVal: '匯款紀錄' }
+    ]
+};
+
+// ─────────────────────────────────────────
+// 3. Table Rendering & Management
+// ─────────────────────────────────────────
+function renderTable(dataArray) {
+    inputTbody.innerHTML = '';
+    if (!dataArray || dataArray.length === 0) appendEmptyRow();
+    else dataArray.forEach(row => appendEmptyRow(row));
+    updateAllDataLists();
+    refreshRowNumbers();
+}
+
+function buildRowHtml(data, rowIndex) {
+    return `
+        <td style="padding:4px 4px 4px 6px;text-align:center;">
+            <span class="drag-handle" draggable="true" title="拖曳重排順序">
+                <i class="fa-solid fa-grip-dots-vertical"></i>
+            </span>
+        </td>
+        <td class="row-num" style="padding:4px 2px;">${rowIndex !== undefined ? rowIndex + 1 : ''}</td>
+        <td style="padding:3px 4px;"><input list="group-datalist" type="text" class="grid-input group-val" placeholder="群組" value="${escHtml(data.group || '')}"></td>
+        <td style="padding:3px 4px;"><input list="node-datalist" type="text" class="grid-input from-val" placeholder="目前步驟 *" value="${escHtml(data.from || '')}" style="font-weight:500;"></td>
+        <td style="padding:3px 4px;"><input type="text" class="grid-input label-val" placeholder="箭頭文字" value="${escHtml(data.label || '')}" style="color:var(--accent);"></td>
+        <td style="padding:3px 4px;"><input list="node-datalist" type="text" class="grid-input to-val" placeholder="下一步驟" value="${escHtml(data.to || '')}"></td>
+        <td style="padding:3px 6px;">
+            <div class="io-cell">
+                <div class="io-row in-row">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <input type="text" class="io-input in-val" placeholder="輸入資料" value="${escHtml(data.inVal || '')}">
+                </div>
+                <div class="io-row out-row">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <input type="text" class="io-input out-val" placeholder="產出資料" value="${escHtml(data.outVal || '')}">
+                </div>
+            </div>
+        </td>
+        <td style="padding:3px 6px;">
+            <div class="row-actions">
+                <button class="row-btn row-btn-insert" onclick="insertNextRow(this)" title="向下接續步驟"><i class="fa-solid fa-arrow-turn-down"></i></button>
+                <button class="row-btn row-btn-del" onclick="deleteRow(this)" title="刪除此列"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </td>
+    `;
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function appendEmptyRow(data = {}) {
+    const tr = document.createElement('tr');
+    const rowCount = inputTbody.querySelectorAll('tr').length;
+    tr.innerHTML = buildRowHtml(data, rowCount);
+    setupRowInputListeners(tr);
+    setupRowDragEvents(tr);
+    inputTbody.appendChild(tr);
+}
+
+function refreshRowNumbers() {
+    inputTbody.querySelectorAll('tr').forEach((tr, i) => {
+        const numCell = tr.querySelectorAll('td')[1];
+        if (numCell) numCell.textContent = i + 1;
+    });
+}
+
+function setupRowInputListeners(tr) {
+    tr.querySelectorAll('.group-val, .from-val, .to-val').forEach(input => {
+        input.addEventListener('change', updateAllDataLists);
+    });
+}
+
+function updateAllDataLists() {
+    const groups = new Set();
+    const nodes = new Set();
+    inputTbody.querySelectorAll('tr').forEach(tr => {
+        const g = tr.querySelector('.group-val');
+        const f = tr.querySelector('.from-val');
+        const t = tr.querySelector('.to-val');
+        if (g && g.value.trim()) groups.add(g.value.trim());
+        if (f && f.value.trim()) nodes.add(f.value.trim());
+        if (t && t.value.trim()) nodes.add(t.value.trim());
+    });
+
+    const refreshDatalist = (datalistId, newItemsSet) => {
+        const datalist = document.getElementById(datalistId);
+        const newArr = Array.from(newItemsSet).filter(Boolean);
+        const oldArr = Array.from(datalist.options).map(opt => opt.value);
+        
+        if (newArr.length === oldArr.length && newArr.every(val => oldArr.includes(val))) {
+            return;
+        }
+
+        datalist.innerHTML = '';
+        newArr.forEach(val => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            datalist.appendChild(opt);
+        });
+    };
+
+    refreshDatalist('group-datalist', groups);
+    refreshDatalist('node-datalist', nodes);
+}
+
+function getTableData() {
+    return Array.from(inputTbody.querySelectorAll('tr')).map(tr => ({
+        group: tr.querySelector('.group-val').value.trim(),
+        from:  tr.querySelector('.from-val').value.trim(),
+        label: tr.querySelector('.label-val').value.trim(),
+        to:    tr.querySelector('.to-val').value.trim(),
+        inVal: tr.querySelector('.in-val').value.trim(),
+        outVal:tr.querySelector('.out-val').value.trim()
+    })).filter(r => r.from !== '');
+}
+
+window.insertNextRow = function(btn) {
+    const tr = btn.closest('tr');
+    const group = tr.querySelector('.group-val').value;
+    const to = tr.querySelector('.to-val').value;
+    const from = tr.querySelector('.from-val').value;
+    const nextFrom = to || from;
+    const newTr = document.createElement('tr');
+    newTr.innerHTML = buildRowHtml({ group, from: nextFrom });
+    setupRowInputListeners(newTr);
+    setupRowDragEvents(newTr);
+    tr.parentNode.insertBefore(newTr, tr.nextSibling);
+    newTr.querySelector('.to-val').focus();
+    refreshRowNumbers();
+    updateAllDataLists();
+};
+
+window.deleteRow = function(btn) {
+    const tr = btn.closest('tr');
+    tr.remove();
+    refreshRowNumbers();
+    updateAllDataLists();
+};
+
+document.getElementById('addRowBtn').addEventListener('click', () => {
+    const data = getTableData();
+    let seed = {};
+    if (data.length > 0) {
+        const last = data[data.length - 1];
+        seed = { group: last.group, from: last.to || '' };
+    }
+    appendEmptyRow(seed);
+    refreshRowNumbers();
+    document.getElementById('tableScroll').scrollTop = 999999;
+});
+
+// ─────────────────────────────────────────
+// 4. Drag-to-Reorder Rows
+// ─────────────────────────────────────────
+function setupRowDragEvents(tr) {
+    const handle = tr.querySelector('.drag-handle');
+
+    handle.addEventListener('dragstart', (e) => {
+        dragSrcRow = tr;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+        requestAnimationFrame(() => tr.classList.add('dragging-row'));
+    });
+
+    tr.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        inputTbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+        if (tr !== dragSrcRow) tr.classList.add('drag-over');
+    });
+
+    tr.addEventListener('dragleave', () => tr.classList.remove('drag-over'));
+
+    tr.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (dragSrcRow && dragSrcRow !== tr) {
+            inputTbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over', 'dragging-row'));
+            const rect = tr.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) tr.parentNode.insertBefore(dragSrcRow, tr);
+            else tr.parentNode.insertBefore(dragSrcRow, tr.nextSibling);
+            dragSrcRow.classList.add('row-just-dropped');
+            setTimeout(() => dragSrcRow && dragSrcRow.classList.remove('row-just-dropped'), 800);
+            refreshRowNumbers();
+            showToast('已重新排列步驟順序');
+        }
+        dragSrcRow = null;
+    });
+
+    tr.addEventListener('dragend', () => {
+        inputTbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over', 'dragging-row'));
+        dragSrcRow = null;
+    });
+}
+
+// ─────────────────────────────────────────
+// 5. Excel Import / Export
+// ─────────────────────────────────────────
+document.getElementById('importDataBtn').addEventListener('click', () => excelFileInput.click());
+
+excelFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        try {
+            const data = new Uint8Array(evt.target.result);
+            const wb = XLSX.read(data, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(ws);
+            if (!json.length) { showToast('表格為空', 'error'); return; }
+            const mapped = json.map(row => ({
+                group: row['階段/群組'] || row['群組'] || '',
+                from:  row['目前步驟'] || row['步驟'] || '',
+                label: row['連線標籤'] || row['標籤'] || '',
+                to:    row['下一步驟'] || '',
+                inVal: row['輸入'] || row['附加輸入'] || '',
+                outVal:row['產出'] || row['附加產出'] || ''
+            }));
+            renderTable(mapped);
+            showToast('資料匯入成功！');
+            excelFileInput.value = '';
+        } catch(err) {
+            showToast('匯入失敗，請確認格式', 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+document.getElementById('exportDataBtn').addEventListener('click', () => {
+    const data = getTableData();
+    if (!data.length) { showToast('沒有資料可匯出', 'error'); return; }
+    const rows = data.map(r => ({
+        '階段/群組': r.group, '目前步驟': r.from, '連線標籤': r.label,
+        '下一步驟': r.to, '輸入': r.inVal, '產出': r.outVal
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '流程規格');
+    ws['!cols'] = [{wch:15},{wch:30},{wch:15},{wch:30},{wch:20},{wch:20}];
+    const safeName = currentTemplateName ? currentTemplateName.replace(/[\\/:*?"<>|]/g, '_') : 'A04';
+    XLSX.writeFile(wb, `工作流程規格表_${safeName}.xlsx`);
+    showToast('Excel 匯出成功！');
+});
+
+// ─────────────────────────────────────────
+// 6. Mermaid Generation
+// ─────────────────────────────────────────
+function generateMermaidSyntax(dataArray) {
+    if (!dataArray.length) return '';
+
+    // 使用 chartDirection 變數決定排列方向 (TD 或 LR)
+    let syntax = `graph ${chartDirection}\n`;
+    syntax += 'classDef process fill:#ffffff,stroke:#5b6af0,stroke-width:2px,color:#1a1d2e,rx:8,ry:8;\n';
+    syntax += 'classDef startEnd fill:#5b6af0,stroke:#4451d4,stroke-width:2px,color:#ffffff,rx:28,ry:28;\n';
+    syntax += 'classDef decision fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#78350f;\n';
+    syntax += 'classDef milestone fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#064e3b;\n';
+
+    let nodesSet = new Set();
+    let nodeGroups = {};
+    let edges = [];
+    globalNodeInfos = {};
+
+    dataArray.forEach(row => {
+        nodesSet.add(row.from);
+        if (row.group) nodeGroups[row.from] = row.group;
+        if (!globalNodeInfos[row.from]) globalNodeInfos[row.from] = { inVals: [], outVals: [] };
+        if (row.inVal && !globalNodeInfos[row.from].inVals.includes(row.inVal))
+            globalNodeInfos[row.from].inVals.push(row.inVal);
+        if (row.outVal && !globalNodeInfos[row.from].outVals.includes(row.outVal))
+            globalNodeInfos[row.from].outVals.push(row.outVal);
+
+        if (row.to) {
+            nodesSet.add(row.to);
+            edges.push({ from: row.from, label: row.label, to: row.to });
+            if (row.group && !nodeGroups[row.to]) nodeGroups[row.to] = row.group;
+            if (!globalNodeInfos[row.to]) globalNodeInfos[row.to] = { inVals: [], outVals: [] };
+        }
+    });
+
+    currentNodesList = Array.from(nodesSet);
+    const hasInEdge = new Set(edges.map(e => e.to));
+    const hasOutEdge = new Set(edges.map(e => e.from));
+    const textToId = {};
+    currentNodesList.forEach((t, i) => { textToId[t] = `n${i}`; });
+
+    function safeLbl(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function renderNodeStr(text) {
+        const id = textToId[text];
+        const safe = safeLbl(text);
+        const info = globalNodeInfos[text];
+
+        let lbl = `<div style='padding:2px 0;font-weight:500'>${safe}</div>`;
+
+        const hasIn  = info && info.inVals.length > 0;
+        const hasOut = info && info.outVals.length > 0;
+
+        if (hasIn || hasOut) {
+            lbl += `<hr style='margin:5px 0;border:none;border-top:1px dashed rgba(0,0,0,0.12);'/>`;
+            lbl += `<div style='text-align:left;font-size:0.82em;display:flex;flex-direction:column;gap:3px;padding-bottom:2px;'>`;
+            if (hasIn) {
+                const v = safeLbl(info.inVals.join(', '));
+                lbl += `<div style='background:#ecfdf5;color:#047857;padding:3px 7px;border-radius:5px;border:1px solid #a7f3d0;'>▶ ${v}</div>`;
+            }
+            if (hasOut) {
+                const v = safeLbl(info.outVals.join(', '));
+                lbl += `<div style='background:#fff7ed;color:#c2410c;padding:3px 7px;border-radius:5px;border:1px solid #fed7aa;'>◀ ${v}</div>`;
+            }
+            lbl += `</div>`;
+        }
+
+        let shape = `["${lbl}"]`, cls = ':::process';
+        if (text.endsWith('?') || text.endsWith('？')) { shape = `{"${lbl}"}`; cls = ':::decision'; }
+        else if (text.startsWith('*') || text.startsWith('★')) { shape = `{{"${lbl}"}}`; cls = ':::milestone'; }
+        else if (!hasInEdge.has(text) || !hasOutEdge.has(text)) { shape = `(["${lbl}"])`; cls = ':::startEnd'; }
+        return `    ${id}${shape}${cls}\n`;
+    }
+
+    let groups = {};
+    let ungrouped = new Set(currentNodesList);
+    Object.keys(nodeGroups).forEach(node => {
+        const g = nodeGroups[node];
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(node);
+    });
+
+    let gi = 0;
+    for (const [gName, gNodes] of Object.entries(groups)) {
+        const sg = `sg${gi}`;
+        syntax += `  subgraph ${sg} ["${safeLbl(gName)}"]\n`;
+        syntax += `    style ${sg} fill:#f7f8fc,stroke:#e4e7f0,stroke-width:2px,stroke-dasharray:5 5\n`;
+        gNodes.forEach(n => { syntax += `  ${renderNodeStr(n)}`; ungrouped.delete(n); });
+        syntax += `  end\n`;
+        gi++;
+    }
+    ungrouped.forEach(n => { syntax += renderNodeStr(n); });
+
+    edges.forEach(edge => {
+        const fi = textToId[edge.from], ti = textToId[edge.to];
+        const lbl = edge.label ? edge.label.trim().replace(/"/g,'&quot;') : '';
+        syntax += lbl ? `    ${fi} -- "${lbl}" --> ${ti}\n` : `    ${fi} --> ${ti}\n`;
+    });
+
+    return syntax;
+}
+
+async function renderFlowchart() {
+    const tableData = getTableData();
+    if (!tableData.length) { showToast('請至少輸入一個步驟', 'error'); return; }
+    const syntax = generateMermaidSyntax(tableData);
+    try {
+        emptyState.style.display = 'none';
+        const { svg } = await mermaid.render('fc-' + Date.now(), syntax);
+        mermaidGraph.innerHTML = svg;
+        hasGeneratedChart = true;
+        exportPngBtn.disabled = false;
+        translateX = 0; translateY = 0; lastTX = 0; lastTY = 0; scale = 1;
+        applyTransform();
+        showToast('圖表更新成功！');
+    } catch(err) {
+        console.error(err);
+        showToast('產生失敗，請確認步驟名稱無特殊符號', 'error');
+        emptyState.style.display = 'flex';
+        mermaidGraph.innerHTML = '';
+        exportPngBtn.disabled = true;
+    }
+}
+
+document.getElementById('generateBtn').addEventListener('click', renderFlowchart);
+
+// 監聽佈局方向選擇器的變化
+layoutDirectionSelect.addEventListener('change', (e) => {
+    chartDirection = e.target.value;
+    if (hasGeneratedChart) {
+        renderFlowchart();
+    }
+});
+
+// ─────────────────────────────────────────
+// 7. Pan & Zoom
+// ─────────────────────────────────────────
+function applyTransform() {
+    flowchartContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+}
+
+function showZoomIndicator() {
+    zoomIndicator.textContent = Math.round(scale * 100) + '%';
+    zoomIndicator.classList.add('show');
+    clearTimeout(zoomIndicatorTimeout);
+    zoomIndicatorTimeout = setTimeout(() => zoomIndicator.classList.remove('show'), 1200);
+}
+
+chartWrapper.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.node')) return;
+    isPanning = true;
+    isDraggingChart = false;
+    panStartX = e.clientX - lastTX;
+    panStartY = e.clientY - lastTY;
+    chartWrapper.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mouseup', () => {
+    if (isPanning) {
+        isPanning = false;
+        lastTX = translateX;
+        lastTY = translateY;
+        chartWrapper.style.cursor = 'grab';
+        setTimeout(() => isDraggingChart = false, 50);
+    }
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    isDraggingChart = true;
+    translateX = e.clientX - panStartX;
+    translateY = e.clientY - panStartY;
+    applyTransform();
+});
+
+chartWrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    scale = Math.min(10, Math.max(0.2, scale + delta));
+    applyTransform();
+    showZoomIndicator();
+}, { passive: false });
+
+let lastTouchX, lastTouchY;
+chartWrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+        lastTouchX = e.touches[0].clientX - lastTX;
+        lastTouchY = e.touches[0].clientY - lastTY;
+    }
+}, { passive: true });
+
+chartWrapper.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1) {
+        translateX = e.touches[0].clientX - lastTouchX;
+        translateY = e.touches[0].clientY - lastTouchY;
+        applyTransform();
+    }
+}, { passive: true });
+
+chartWrapper.addEventListener('touchend', () => { lastTX = translateX; lastTY = translateY; });
+
+document.getElementById('zoomInBtn').addEventListener('click', () => { scale = Math.min(10, scale + 0.2); applyTransform(); showZoomIndicator(); });
+document.getElementById('zoomOutBtn').addEventListener('click', () => { scale = Math.max(0.2, scale - 0.2); applyTransform(); showZoomIndicator(); });
+document.getElementById('zoomResetBtn').addEventListener('click', () => {
+    translateX = 0; translateY = 0; lastTX = 0; lastTY = 0; scale = 1;
+    applyTransform(); showZoomIndicator();
+});
+
+// ─────────────────────────────────────────
+// 8. Export PNG
+// ─────────────────────────────────────────
+exportPngBtn.addEventListener('click', () => {
+    if (!hasGeneratedChart) return;
+    const orig = exportPngBtn.innerHTML;
+    exportPngBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    exportPngBtn.disabled = true;
+
+    const origTrans = flowchartContainer.style.transform;
+    translateX = 0; translateY = 0; scale = 1; applyTransform();
+
+    const origWrapperStyle = chartWrapper.style.cssText;
+    chartWrapper.style.width = 'max-content';
+    chartWrapper.style.height = 'max-content';
+    chartWrapper.style.overflow = 'visible';
+
+    setTimeout(() => {
+        html2canvas(chartWrapper, { scale: 2, useCORS: true, backgroundColor: '#f7f8fc' }).then(canvas => {
+            const a = document.createElement('a');
+            const safeName = currentTemplateName ? currentTemplateName.replace(/[\\/:*?"<>|]/g, '_') : 'A04';
+            a.download = `工作流程圖_${safeName}.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+            chartWrapper.style.cssText = origWrapperStyle;
+            flowchartContainer.style.transform = origTrans;
+            exportPngBtn.innerHTML = orig;
+            exportPngBtn.disabled = false;
+            showToast('PNG 匯出成功！');
+        }).catch(() => {
+            chartWrapper.style.cssText = origWrapperStyle;
+            flowchartContainer.style.transform = origTrans;
+            exportPngBtn.innerHTML = orig;
+            exportPngBtn.disabled = false;
+            showToast('匯出失敗', 'error');
+        });
+    }, 150);
+});
+
+// ─────────────────────────────────────────
+// 9. Templates & LocalStorage
+// ─────────────────────────────────────────
+let customTemplates = JSON.parse(
+    localStorage.getItem('workflowTableTemplates_A04') ||
+    localStorage.getItem('workflowTableTemplates_A03') ||
+    '{}'
+);
+const customTemplateGroup = document.getElementById('customTemplateGroup');
+const templateSelect = document.getElementById('templateSelect');
+const deleteTemplateBtn = document.getElementById('deleteTemplateBtn');
+
+function updateTemplateDropdown() {
+    customTemplateGroup.innerHTML = '';
+    Object.keys(customTemplates).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = 'custom_' + key;
+        opt.textContent = key;
+        customTemplateGroup.appendChild(opt);
+    });
+}
+
+function checkDeleteBtn() {
+    const isCustom = templateSelect.value.startsWith('custom_');
+    deleteTemplateBtn.style.display = isCustom ? 'inline-flex' : 'none';
+}
+
+updateTemplateDropdown();
+
+templateSelect.addEventListener('change', (e) => {
+    checkDeleteBtn();
+    const val = e.target.value;
+    
+    if (!val) {
+        currentTemplateName = '';
+        inputTbody.innerHTML = '';
+        appendEmptyRow();
+        refreshRowNumbers();
+        updateAllDataLists();
+        
+        hasGeneratedChart = false;
+        mermaidGraph.innerHTML = '';
+        emptyState.style.display = 'flex';
+        exportPngBtn.disabled = true;
+        return;
+    }
+    
+    let data = [];
+    if (val.startsWith('custom_')) {
+        const name = val.replace('custom_', '');
+        currentTemplateName = name;
+        data = customTemplates[name];
+    } else {
+        currentTemplateName = val === 'project' ? '專案開發' : val === 'daily' ? '審核流程' : val;
+        data = templates[val];
+    }
+    renderTable(data);
+    renderFlowchart();
+});
+
+deleteTemplateBtn.addEventListener('click', () => {
+    const val = templateSelect.value;
+    if (!val.startsWith('custom_')) return;
+    const key = val.replace('custom_', '');
+    if (confirm(`確定刪除模板「${key}」？`)) {
+        delete customTemplates[key];
+        localStorage.setItem('workflowTableTemplates_A04', JSON.stringify(customTemplates));
+        
+        updateTemplateDropdown();
+        templateSelect.value = '';
+        currentTemplateName = '';
+        checkDeleteBtn();
+        
+        inputTbody.innerHTML = '';
+        appendEmptyRow();
+        refreshRowNumbers();
+        updateAllDataLists();
+        
+        hasGeneratedChart = false;
+        mermaidGraph.innerHTML = '';
+        emptyState.style.display = 'flex';
+        exportPngBtn.disabled = true;
+        
+        showToast('模板已成功刪除');
+    }
+});
+
+// Save modal
+const saveTemplateModal = document.getElementById('saveTemplateModal');
+const templateNameInput = document.getElementById('templateNameInput');
+document.getElementById('openSaveModalBtn').addEventListener('click', () => {
+    if (!getTableData().length) { showToast('表格是空的', 'error'); return; }
+    saveTemplateModal.classList.add('open');
+    templateNameInput.value = currentTemplateName || '';
+    templateNameInput.focus();
+});
+window.closeSaveModal = () => saveTemplateModal.classList.remove('open');
+document.getElementById('confirmSaveTemplateBtn').addEventListener('click', () => {
+    const name = templateNameInput.value.trim();
+    if (!name) { showToast('請輸入名稱', 'error'); return; }
+    customTemplates[name] = getTableData();
+    localStorage.setItem('workflowTableTemplates_A04', JSON.stringify(customTemplates));
+    currentTemplateName = name;  
+    updateTemplateDropdown();
+    templateSelect.value = 'custom_' + name;
+    checkDeleteBtn();
+    showToast(`已儲存模板：${name}`);
+    closeSaveModal();
+});
+
+// ─────────────────────────────────────────
+// 10. Interactive Node Addition (click chart)
+// ─────────────────────────────────────────
+const addNodeModal = document.getElementById('addNodeModal');
+const modalParentNodeName = document.getElementById('modalParentNodeName');
+
+mermaidGraph.addEventListener('click', (e) => {
+    if (isDraggingChart) return;
+    const nodeG = e.target.closest('.node');
+    if (!nodeG) return;
+
+    const fo = nodeG.querySelector('foreignObject');
+    let text = '';
+    if (fo) {
+        const firstDiv = fo.querySelector('div div');
+        text = firstDiv ? firstDiv.textContent.trim() : fo.textContent.trim();
+    } else {
+        const textElem = nodeG.querySelector('.nodeLabel') || nodeG;
+        text = textElem.textContent.trim();
+    }
+
+    text = text.replace(/&quot;/g, '"');
+    if (!text) return;
+
+    selectedNodeForBranch = text;
+    modalParentNodeName.textContent = text;
+    ['newNodeInput','newEdgeLabel','newInVal','newOutVal'].forEach(id => document.getElementById(id).value = '');
+    addNodeModal.classList.add('open');
+    document.getElementById('newNodeInput').focus();
+});
+
+document.getElementById('cancelNodeBtn').addEventListener('click', () => {
+    addNodeModal.classList.remove('open');
+    selectedNodeForBranch = null;
+});
+
+document.getElementById('confirmNodeBtn').addEventListener('click', () => {
+    const step  = document.getElementById('newNodeInput').value.trim();
+    const label = document.getElementById('newEdgeLabel').value.trim();
+    const inVal = document.getElementById('newInVal').value.trim();
+    const outVal= document.getElementById('newOutVal').value.trim();
+    if (step && selectedNodeForBranch) {
+        const d = getTableData();
+        const p = d.find(r => r.from === selectedNodeForBranch || r.to === selectedNodeForBranch);
+        appendEmptyRow({ group: p ? p.group : '', from: selectedNodeForBranch, label, to: step, inVal, outVal });
+        refreshRowNumbers();
+        updateAllDataLists();
+        renderFlowchart();
+        showToast('已新增分支節點！');
+    }
+    addNodeModal.classList.remove('open');
+});
+
+document.getElementById('newNodeInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('confirmNodeBtn').click();
+});
+
+// ─────────────────────────────────────────
+// 11. Clear
+// ─────────────────────────────────────────
+document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!confirm('確定要清空所有資料？')) return;
+    inputTbody.innerHTML = '';
+    appendEmptyRow();
+    refreshRowNumbers();
+    currentNodesList = [];
+    globalNodeInfos = {};
+    hasGeneratedChart = false;
+    mermaidGraph.innerHTML = '';
+    emptyState.style.display = 'flex';
+    exportPngBtn.disabled = true;
+    translateX = translateY = lastTX = lastTY = 0; scale = 1;
+    applyTransform();
+    updateAllDataLists();
+    currentTemplateName = '';
+    templateSelect.value = '';
+    checkDeleteBtn();
+});
+
+// ─────────────────────────────────────────
+// 12. Toast
+// ─────────────────────────────────────────
+let toastTO;
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon  = document.getElementById('toast-icon');
+    document.getElementById('toast-message').textContent = msg;
+    icon.className = type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check';
+    icon.style.color = type === 'error' ? '#f87171' : '#34d399';
+    toast.classList.add('show');
+    clearTimeout(toastTO);
+    toastTO = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────
+// 13. Init
+// ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    currentTemplateName = '專案開發';
+    templateSelect.value = 'project';
+    renderTable(templates.project);
+    renderFlowchart();
+});
+</script>
+</body>
+</html>
